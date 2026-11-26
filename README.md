@@ -7,15 +7,15 @@ DeepSeek Harness 插件：文献知识图谱工作台。中间星空知识图谱
 
 ## 截图
 
-| 浅色 · 星图 | 深色 · 星图 |
-| --- | --- |
-| ![浅色星图](docs/screenshots/01-galaxy-light.png) | ![深色星图](docs/screenshots/02-galaxy-dark.png) |
+演示数据为脚本生成的合成文献库（`scripts/seed-scale.mjs`，120 篇 / 6 类目），不是真实论文。
 
-| 已读 / 未读状态 | 详情 · 评分与期刊指标 |
+| 星图 · 浅色 | 星图 · 深色 |
 | --- | --- |
-| ![已读未读](docs/screenshots/03-read-state.png) | ![详情](docs/screenshots/04-detail-metrics.png) |
+| ![浅色星图](docs/screenshots/01-star-map-light.png) | ![深色星图](docs/screenshots/02-star-map-dark.png) |
 
-![Zotero 导入](docs/screenshots/05-zotero-import.png)
+| 详情：已读状态 / 五星评分 / 期刊指标 | 时间轴视图 |
+| --- | --- |
+| ![详情](docs/screenshots/03-detail-read-metrics.png) | ![时间轴](docs/screenshots/04-timeline.png) |
 ## 功能
 
 - **星图**：三层「星系 → 星座 → 论文」布局 —— 星系是按一级学科聚出的云团（彩色星云 + 领域标题），
