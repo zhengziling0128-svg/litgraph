@@ -31,6 +31,7 @@ import { SearchBar } from './components/SearchBar'
 import { DetailPanel } from './components/DetailPanel'
 import { LibraryPanel } from './components/LibraryPanel'
 import { TimelineView, buildTimelineNodes } from './components/TimelineView'
+import { InsightView } from './components/InsightView'
 import { ZoteroImport } from './components/ZoteroImport'
 import { Toasts } from './components/Toasts'
 import type { ToastItem } from './components/Toasts'
@@ -109,8 +110,9 @@ export function Workbench() {
     }
   }, [graph, activeCluster])
 
-  // ---- center view (star map / year timeline) --------------------------------
-  const [viewMode, setViewMode] = React.useState<'graph' | 'timeline'>('graph')
+  // ---- center view (star map / year timeline / insight) ----------------------
+  const [viewMode, setViewMode] = React.useState<'graph' | 'timeline' | 'insight'>('graph')
+  const [insightSettingsToken, setInsightSettingsToken] = React.useState(0)
   const [zoteroOpen, setZoteroOpen] = React.useState(false)
 
   // ---- imports ---------------------------------------------------------------
@@ -350,6 +352,16 @@ export function Workbench() {
   const locateNode = (id: string) => {
     setFocus({ id, token: Date.now() })
     setDetailOpen(false)
+    setLibraryOpen(false)
+  }
+
+  // Insight evidence chips: select the paper, open its detail and jump back to
+  // the star map (the insight tab is not where the node lives).
+  const locateFromInsight = (id: string) => {
+    setViewMode('graph')
+    setSelectedId(id)
+    setFocus({ id, token: Date.now() })
+    setDetailOpen(true)
     setLibraryOpen(false)
   }
 
@@ -665,6 +677,15 @@ export function Workbench() {
             >
               时间轴
             </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={viewMode === 'insight'}
+              className={'lg-view-btn' + (viewMode === 'insight' ? ' is-active' : '')}
+              onClick={() => setViewMode('insight')}
+            >
+              洞察
+            </button>
           </div>
 
           {viewMode === 'timeline' ? (
@@ -673,6 +694,14 @@ export function Workbench() {
               selectedId={selectedId}
               onSelect={selectPaper}
               onClear={() => selectPaper(null)}
+            />
+          ) : viewMode === 'insight' ? (
+            <InsightView
+              graph={graph}
+              selectedId={selectedId}
+              onLocate={locateFromInsight}
+              onToast={pushToast}
+              settingsToken={insightSettingsToken}
             />
           ) : (
             <StarMap
@@ -733,6 +762,7 @@ export function Workbench() {
               setActiveTag(tag)
               setPage(1)
             }}
+            onInsightSettingsChanged={() => setInsightSettingsToken((token) => token + 1)}
             minRating={minRating}
             onMinRating={(value) => {
               setMinRating(value)

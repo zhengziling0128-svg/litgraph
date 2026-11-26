@@ -293,6 +293,50 @@ export class LlmAnalyzer {
     throw lastError ?? new LlmAnalyzeError('LLM_ERROR', 'no usable LLM provider route')
   }
 
+  /**
+   * One-shot JSON completion for features that define their own schema (the
+   * insight view). Retries malformed output like analyze() does; the caller
+   * validates the shape.
+   */
+  async completeJson(
+    systemPrompt: string,
+    userPrompt: string,
+    maxTokens = 3000,
+  ): Promise<{ value: unknown; model: string; ms: number; attempts: number }> {
+    const targets = await this.resolver.candidates()
+    let lastError: LlmAnalyzeError | null = null
+    const unavailable: string[] = []
+    const maxAttempts = Math.max(1, 1 + this.config.maxParseRetries)
+    for (const target of targets) {
+      for (let attempt = 0; attempt < maxAttempts; attempt += 1) {
+        const started = Date.now()
+        try {
+          const raw = await this.callOnce(target, userPrompt, maxTokens, systemPrompt)
+          const value = parseJsonLoose(raw)
+          this.resolver.markGood(target)
+          return { value, model: target.model, ms: Date.now() - started, attempts: attempt + 1 }
+        } catch (error) {
+          const typed = toLlmError(error)
+          lastError = typed
+          if (isCredentialFailure(typed.code)) {
+            this.resolver.markFailed(target.provider)
+            unavailable.push(target.provider + '/' + target.model + ': ' + typed.code)
+            break
+          }
+          if (!RETRYABLE.has(typed.code) || attempt === maxAttempts - 1) throw typed
+          console.warn('[litgraph] insight completion attempt ' + (attempt + 1) + ' failed (' + typed.code + '), retrying')
+        }
+      }
+    }
+    if (lastError !== null && unavailable.length > 1) {
+      throw new LlmAnalyzeError(
+        lastError.code,
+        lastError.message + ' (no usable model route; tried ' + unavailable.join(', ') + ')',
+      )
+    }
+    throw lastError ?? new LlmAnalyzeError('LLM_ERROR', 'no usable LLM provider route')
+  }
+
   private async attemptAnalyze(input: AnalyzeInput, target: LlmTarget): Promise<AnalyzeResult> {
     const maxAttempts = Math.max(1, 1 + this.config.maxParseRetries)
     const taxonomyMode: TaxonomyMode = input.taxonomyMode ?? 'free'

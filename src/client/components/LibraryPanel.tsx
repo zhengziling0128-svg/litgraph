@@ -1,6 +1,6 @@
 /** Right column: sortable, paginated, cluster-filtered library list. */
 import * as React from 'react'
-import type { Cluster, PapersPage, PaperListItem, PaperDetail, OcrEngine, SortKey, SortOrder, TaxonomyMode } from '../types'
+import type { Cluster, PapersPage, PaperListItem, PaperDetail, InsightScope, OcrEngine, SortKey, SortOrder, TaxonomyMode } from '../types'
 import { OCR_ENGINE_OPTIONS, SORT_OPTIONS, STATUS_LABEL, TAXONOMY_MODE_OPTIONS } from '../types'
 import { deletePaper, fetchAllPapers, fetchPaperDetails, fetchSettings, saveSettings, updatePaper } from '../api'
 import { buildBibtex, downloadBibtexFile, BIBTEX_FILENAME, type BibtexPaper } from '../bibtex'
@@ -20,6 +20,18 @@ const CLUSTER_LEVEL_OPTIONS: Array<{ value: ClusterLevel; label: string; hint: s
   { value: 2, label: '二级 · 子领域（推荐）', hint: '按子领域分星座，例如 机械工程 > 故障诊断，兼顾总览与区分度' },
   { value: 3, label: '三级 · 具体主题', hint: '按更细主题分星座，星座最多，适合精读与查找' },
 ]
+const INSIGHT_SCOPE_OPTIONS: Array<{ value: InsightScope; label: string; hint: string }> = [
+  { value: 'cluster', label: '当前聚类', hint: '只分析星图里选中的那个聚类，最快也最聚焦' },
+  { value: 'group', label: '同一学科', hint: '把同一学科下所有聚类一起统计，方法面更宽' },
+  { value: 'all', label: '全部文献', hint: '整个论文库一起统计，最泛也最慢' },
+]
+
+const INSIGHT_YEAR_OPTIONS: Array<{ value: number; label: string; hint: string }> = [
+  { value: 3, label: '近 3 年', hint: '默认，适合看当前热点' },
+  { value: 5, label: '近 5 年', hint: '窗口更宽，波动更平滑' },
+  { value: 10, label: '近 10 年', hint: '适合老领域或综述' },
+]
+
 type Notice = { kind: ToastKind; message: string; at: number }
 
 export interface LibraryPanelProps {
@@ -43,6 +55,8 @@ export interface LibraryPanelProps {
   onStarredOnly?: (value: boolean) => void
   /** Called after the graph cluster granularity changed, so the owner can reload the graph. */
   onClusterLevelChanged?: () => void
+  /** Called after the insight defaults changed, so an open insight view can re-read them. */
+  onInsightSettingsChanged?: () => void
   /** Controlled tag filter (host-side, exact tag match). Omit to filter the current page locally. */
   activeTag?: string | null
   onTag?: (tag: string | null) => void
@@ -87,6 +101,7 @@ export function LibraryPanel(props: LibraryPanelProps) {
     onPaperPatched,
     onBatchDeleted,
     onClusterLevelChanged,
+    onInsightSettingsChanged,
   } = props
 
   const items = pageData ? pageData.items : []
@@ -122,6 +137,13 @@ export function LibraryPanel(props: LibraryPanelProps) {
   const [engineSaving, setEngineSaving] = React.useState<OcrEngine | null>(null)
   const [settingsCluster, setSettingsCluster] = React.useState<ClusterLevel | null>(null)
   const [clusterSaving, setClusterSaving] = React.useState<ClusterLevel | null>(null)
+  const [settingsInsight, setSettingsInsight] = React.useState<{
+    scope: InsightScope
+    years: number
+    saveNotes: boolean
+    precompute: boolean
+  } | null>(null)
+  const [insightSaving, setInsightSaving] = React.useState<string | null>(null)
   const exportWrapRef = React.useRef<HTMLDivElement | null>(null)
 
   // ---- batch selection ------------------------------------------------------
@@ -319,17 +341,25 @@ export function LibraryPanel(props: LibraryPanelProps) {
   React.useEffect(() => {
     if (!settingsOpen) return
     const onKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && settingsSaving === null && engineSaving === null && clusterSaving === null) setSettingsOpen(false)
+      if (
+        event.key === 'Escape' &&
+        settingsSaving === null &&
+        engineSaving === null &&
+        clusterSaving === null &&
+        insightSaving === null
+      )
+        setSettingsOpen(false)
     }
     document.addEventListener('keydown', onKeyDown)
     return () => document.removeEventListener('keydown', onKeyDown)
-  }, [settingsOpen, settingsSaving, engineSaving, clusterSaving])
+  }, [settingsOpen, settingsSaving, engineSaving, clusterSaving, insightSaving])
 
   const openSettings = () => {
     setSettingsOpen(true)
     setSettingsMode(null)
     setSettingsEngine(null)
     setSettingsCluster(null)
+    setSettingsInsight(null)
     setSettingsError(null)
     setSettingsLoading(true)
     fetchSettings()
@@ -338,6 +368,12 @@ export function LibraryPanel(props: LibraryPanelProps) {
         setSettingsEngine(payload.settings.ocrEngine ?? 'auto')
         const level = payload.settings.clusterLevel
         setSettingsCluster(level === 1 || level === 3 ? level : 2)
+        setSettingsInsight({
+          scope: payload.settings.insightScope ?? 'cluster',
+          years: payload.settings.insightRecentYears ?? 3,
+          saveNotes: payload.settings.insightSaveNotes !== false,
+          precompute: payload.settings.insightPrecompute === true,
+        })
       })
       .catch((caught) => setSettingsError(describeError(caught)))
       .finally(() => setSettingsLoading(false))
@@ -396,6 +432,40 @@ export function LibraryPanel(props: LibraryPanelProps) {
       setSettingsError('保存失败：' + describeError(caught))
     } finally {
       setClusterSaving(null)
+    }
+  }
+
+  const patchInsightSettings = async (patch: {
+    insightScope?: InsightScope
+    insightRecentYears?: number
+    insightSaveNotes?: boolean
+    insightPrecompute?: boolean
+  }, key: string, message: string) => {
+    if (insightSaving !== null || settingsInsight === null) return
+    const previous = settingsInsight
+    setSettingsError(null)
+    setInsightSaving(key)
+    setSettingsInsight({
+      scope: patch.insightScope ?? previous.scope,
+      years: patch.insightRecentYears ?? previous.years,
+      saveNotes: patch.insightSaveNotes ?? previous.saveNotes,
+      precompute: patch.insightPrecompute ?? previous.precompute,
+    })
+    try {
+      const payload = await saveSettings(patch)
+      onInsightSettingsChanged?.()
+      setSettingsInsight({
+        scope: payload.settings.insightScope ?? previous.scope,
+        years: payload.settings.insightRecentYears ?? previous.years,
+        saveNotes: payload.settings.insightSaveNotes !== false,
+        precompute: payload.settings.insightPrecompute === true,
+      })
+      notify('success', message)
+    } catch (caught) {
+      setSettingsInsight(previous)
+      setSettingsError('保存失败：' + describeError(caught))
+    } finally {
+      setInsightSaving(null)
     }
   }
 
@@ -803,7 +873,13 @@ export function LibraryPanel(props: LibraryPanelProps) {
         <div
           className="lgf-modal-backdrop"
           onMouseDown={(event) => {
-            if (event.target === event.currentTarget && settingsSaving === null && engineSaving === null) setSettingsOpen(false)
+            if (
+              event.target === event.currentTarget &&
+              settingsSaving === null &&
+              engineSaving === null &&
+              insightSaving === null
+            )
+              setSettingsOpen(false)
           }}
         >
           <div className="lgf-modal" role="dialog" aria-modal="true" aria-labelledby="lgf-settings-title">
@@ -815,7 +891,7 @@ export function LibraryPanel(props: LibraryPanelProps) {
                 type="button"
                 className="lgf-modal-close"
                 aria-label="关闭设置"
-                disabled={settingsSaving !== null || engineSaving !== null}
+                disabled={settingsSaving !== null || engineSaving !== null || insightSaving !== null}
                 onClick={() => setSettingsOpen(false)}
               >
                 ×
@@ -842,7 +918,7 @@ export function LibraryPanel(props: LibraryPanelProps) {
                       role="radio"
                       aria-checked={settingsMode === option.value}
                       className={'lgf-radio-row' + (settingsMode === option.value ? ' is-active' : '')}
-                      disabled={settingsSaving !== null || engineSaving !== null}
+                      disabled={settingsSaving !== null || engineSaving !== null || insightSaving !== null}
                       onClick={() => void chooseMode(option.value)}
                     >
                       <span className="lgf-radio-dot" />
@@ -910,12 +986,117 @@ export function LibraryPanel(props: LibraryPanelProps) {
                   ))
                 : null}
               <div className="lgf-modal-note">没有文本层的扫描版 PDF 才走 OCR；文本层 PDF 照旧直接解析。</div>
+              <div className="lgf-modal-section-title" style={{ marginTop: 18 }}>
+                洞察作用域
+              </div>
+              {settingsInsight !== null
+                ? INSIGHT_SCOPE_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={settingsInsight.scope === option.value}
+                      className={'lgf-radio-row' + (settingsInsight.scope === option.value ? ' is-active' : '')}
+                      disabled={insightSaving !== null}
+                      onClick={() =>
+                        void patchInsightSettings(
+                          { insightScope: option.value },
+                          'scope-' + option.value,
+                          '洞察作用域已切换为「' + option.label + '」',
+                        )
+                      }
+                    >
+                      <span className="lgf-radio-dot" />
+                      <span className="lgf-radio-text">
+                        <span className="lgf-radio-label">
+                          {option.label}
+                          {insightSaving === 'scope-' + option.value ? '（保存中…）' : ''}
+                        </span>
+                        <span className="lgf-radio-hint">{option.hint}</span>
+                      </span>
+                    </button>
+                  ))
+                : null}
+              <div className="lgf-modal-note">洞察页默认只统计当前选中的聚类；切换后立即生效。</div>
+              <div className="lgf-modal-section-title" style={{ marginTop: 18 }}>
+                洞察近期窗口
+              </div>
+              {settingsInsight !== null
+                ? INSIGHT_YEAR_OPTIONS.map((option) => (
+                    <button
+                      key={option.value}
+                      type="button"
+                      role="radio"
+                      aria-checked={settingsInsight.years === option.value}
+                      className={'lgf-radio-row' + (settingsInsight.years === option.value ? ' is-active' : '')}
+                      disabled={insightSaving !== null}
+                      onClick={() =>
+                        void patchInsightSettings(
+                          { insightRecentYears: option.value },
+                          'years-' + option.value,
+                          '洞察近期窗口已切换为「' + option.label + '」',
+                        )
+                      }
+                    >
+                      <span className="lgf-radio-dot" />
+                      <span className="lgf-radio-text">
+                        <span className="lgf-radio-label">
+                          {option.label}
+                          {insightSaving === 'years-' + option.value ? '（保存中…）' : ''}
+                        </span>
+                        <span className="lgf-radio-hint">{option.hint}</span>
+                      </span>
+                    </button>
+                  ))
+                : null}
+              <div className="lgf-modal-note">用来判断「近期升温」的窗口；升温按占比算，不按绝对篇数。</div>
+              <div className="lgf-modal-section-title" style={{ marginTop: 18 }}>
+                洞察卡片
+              </div>
+              {settingsInsight !== null
+                ? [
+                    {
+                      key: 'notes',
+                      label: '允许「存为笔记」',
+                      hint: '把空白组合、研究问题一键追加到证据论文的笔记里',
+                      on: settingsInsight.saveNotes,
+                      patch: { insightSaveNotes: !settingsInsight.saveNotes },
+                    },
+                    {
+                      key: 'precompute',
+                      label: '后台预生成全部聚类',
+                      hint: '打开洞察页时预先算好其它聚类，费模型调用，切换更快',
+                      on: settingsInsight.precompute,
+                      patch: { insightPrecompute: !settingsInsight.precompute },
+                    },
+                  ].map((row) => (
+                    <button
+                      key={row.key}
+                      type="button"
+                      role="radio"
+                      aria-checked={row.on}
+                      className={'lgf-radio-row' + (row.on ? ' is-active' : '')}
+                      disabled={insightSaving !== null}
+                      onClick={() => void patchInsightSettings(row.patch, row.key, '洞察设置已更新')}
+                    >
+                      <span className="lgf-radio-dot" />
+                      <span className="lgf-radio-text">
+                        <span className="lgf-radio-label">
+                          {row.label}：{row.on ? '开' : '关'}
+                          {insightSaving === row.key ? '（保存中…）' : ''}
+                        </span>
+                        <span className="lgf-radio-hint">{row.hint}</span>
+                      </span>
+                    </button>
+                  ))
+                : null}
+              <div className="lgf-modal-note">洞察只统计本库论文，不是学界前沿；每条结论都附证据论文。</div>
             </div>
             <div className="lgf-modal-foot">
               <button
                 type="button"
                 className="lg-btn"
-                disabled={settingsSaving !== null || engineSaving !== null}
+                disabled={settingsSaving !== null || engineSaving !== null || insightSaving !== null}
                 onClick={() => setSettingsOpen(false)}
               >
                 关闭

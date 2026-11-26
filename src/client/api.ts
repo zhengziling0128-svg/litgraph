@@ -8,6 +8,8 @@
 import type {
   GraphPayload,
   ImportJob,
+  InsightPayload,
+  InsightScope,
   LibrarySettings,
   PapersPage,
   PapersQuery,
@@ -137,6 +139,25 @@ export function refreshMetrics(
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
   })
+}
+
+export interface InsightQuery {
+  scope?: InsightScope
+  clusterId?: string | null
+  recentYears?: number
+  /** Bypass the on-disk cache and ask the model again. */
+  refresh?: boolean
+}
+
+/** 数据库内论文研究趋势 for one scope (GET /api/litgraph/insight). */
+export function fetchInsight(query: InsightQuery = {}, signal?: AbortSignal): Promise<InsightPayload> {
+  const params = new URLSearchParams()
+  if (query.scope) params.set('scope', query.scope)
+  if (typeof query.clusterId === 'string' && query.clusterId !== '') params.set('cluster', query.clusterId)
+  if (typeof query.recentYears === 'number') params.set('recentYears', String(query.recentYears))
+  if (query.refresh === true) params.set('refresh', '1')
+  const suffix = params.toString()
+  return requestJSON<InsightPayload>('/insight' + (suffix === '' ? '' : '?' + suffix), { signal })
 }
 
 export function fetchSettings(signal?: AbortSignal): Promise<SettingsPayload> {

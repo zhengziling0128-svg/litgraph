@@ -261,10 +261,10 @@ async function main() {
   // 21 route definitions collapse to 19 distinct paths: /api/litgraph/paper
   // carries GET+HEAD, DELETE and PATCH, which the host web server requires to be
   // one registration per path.
-  checkEqual('route count', host.routes.length, 19)
-  checkEqual('unique route paths', new Set(host.routes.map((route) => route.path)).size, 19)
+  checkEqual('route count', host.routes.length, 20)
+  checkEqual('unique route paths', new Set(host.routes.map((route) => route.path)).size, 20)
   check('all routes are kind=exact', host.routes.every((route) => route.kind === 'exact'))
-  for (const routePath of ['/api/litgraph/status', '/api/litgraph/graph', '/api/litgraph/papers', '/api/litgraph/paper', '/api/litgraph/settings', '/api/litgraph/open', '/api/litgraph/metrics/refresh', '/api/litgraph/metrics/probe', '/api/litgraph/job', '/api/litgraph/upload', '/api/litgraph/file', '/api/litgraph/ocr/probe', '/api/litgraph/zotero/scan', '/api/litgraph/zotero/import', '/api/litgraph/retry-failed', '/api/litgraph/zotero/state', '/api/litgraph/zotero/authorize', '/api/litgraph/zotero/sync', '/api/litgraph/paper/zotero']) {
+  for (const routePath of ['/api/litgraph/status', '/api/litgraph/graph', '/api/litgraph/papers', '/api/litgraph/paper', '/api/litgraph/settings', '/api/litgraph/open', '/api/litgraph/metrics/refresh', '/api/litgraph/metrics/probe', '/api/litgraph/job', '/api/litgraph/upload', '/api/litgraph/file', '/api/litgraph/ocr/probe', '/api/litgraph/insight', '/api/litgraph/zotero/scan', '/api/litgraph/zotero/import', '/api/litgraph/retry-failed', '/api/litgraph/zotero/state', '/api/litgraph/zotero/authorize', '/api/litgraph/zotero/sync', '/api/litgraph/paper/zotero']) {
     check('registered ' + routePath, host.routes.some((route) => route.path === routePath && typeof route.handler === 'function'))
   }
 

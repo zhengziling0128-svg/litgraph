@@ -164,6 +164,11 @@ export class LitgraphPipeline {
     await this.store.cleanupTmp()
   }
 
+  /** Analyzer handle for features that need their own model call (insight view). */
+  get analyzerService(): LlmAnalyzer {
+    return this.analyzer
+  }
+
   invalidateGraph(): void {
     this.graphCache = null
     this.graphCacheLevel = null

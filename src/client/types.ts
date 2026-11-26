@@ -255,11 +255,85 @@ export interface LibrarySettings {
   clusterLevel?: 1 | 2 | 3
   /** Journal-metrics lookup switch; undefined = host default. */
   metricsEnabled?: boolean
+  /** 洞察默认作用域; undefined = 'cluster'. */
+  insightScope?: InsightScope
+  /** "近期"窗口（年），默认 3。 */
+  insightRecentYears?: number
+  /** 灵感卡是否给出「存进笔记」按钮，默认 true。 */
+  insightSaveNotes?: boolean
+  /** 打开洞察时是否后台补齐其它聚类缓存，默认 false。 */
+  insightPrecompute?: boolean
 }
 
 export interface SettingsPayload {
   ok: boolean
   settings: LibrarySettings
+}
+
+/** 洞察作用域：当前聚类 / 同一学科（星系）/ 全部文献。 */
+export type InsightScope = 'cluster' | 'group' | 'all'
+
+export type InsightTrend = 'new' | 'rising' | 'steady' | 'cooling'
+
+export interface InsightMethod {
+  name: string
+  count: number
+  firstYear: number | null
+  recentCount: number
+  /** 0..1 */
+  recentShare: number
+  isNew: boolean
+  trend: InsightTrend
+  avgRating: number | null
+  note: string
+  paperIds: string[]
+}
+
+export interface InsightGap {
+  method: string
+  problem: string
+  why: string
+  paperIds: string[]
+}
+
+export interface InsightQuestion {
+  question: string
+  why: string
+  paperIds: string[]
+}
+
+export interface InsightPaperRef {
+  id: string
+  title: string
+  year: number | null
+  clusterLabel: string
+}
+
+/** GET /api/litgraph/insight — 数据库内论文研究趋势. */
+export interface InsightPayload {
+  ok: true
+  scope: InsightScope
+  scopeLabel: string
+  clusterId: string | null
+  clusterLabel: string
+  recentYears: number
+  recentFromYear: number
+  readyCount: number
+  sampleSize: number
+  truncated: boolean
+  generatedAt: string
+  cached: boolean
+  model: string
+  ms: number
+  disclaimer: string
+  objects: string[]
+  methods: InsightMethod[]
+  evolution: string[]
+  solved: string[]
+  limits: string[]
+  gaps: InsightGap[]
+  questions: InsightQuestion[]
+  papers: InsightPaperRef[]
 }
 
 export type ImportJobState = 'queued' | 'parsing' | 'extracting' | 'graphing' | 'done' | 'failed'

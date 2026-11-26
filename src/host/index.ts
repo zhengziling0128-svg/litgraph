@@ -13,6 +13,7 @@ import { resolveConfig } from './config.js'
 import { categoryTop, type GraphData } from './graph.js'
 import { LlmAnalyzer } from './llm.js'
 import { LlmTargetResolver, type DefaultSelectionReader } from './llm-target.js'
+import { buildInsight, InsightError, type InsightScope } from './insights.js'
 import { fetchJournalMetrics, metricsEnabledFor, metricsSecretKeyFor } from './metrics.js'
 import { ocrPdfBuffer, probeOcr } from './ocr.js'
 import { openPaper } from './open.js'
@@ -437,6 +438,10 @@ route('/api/litgraph/settings', ['GET', 'HEAD', 'PUT'], async (req, res, { store
             clusterLevel?: unknown
             metricsSecretKey?: unknown
             metricsEnabled?: unknown
+            insightScope?: unknown
+            insightRecentYears?: unknown
+            insightSaveNotes?: unknown
+            insightPrecompute?: unknown
           })
         : {}
     const patch: Partial<LibrarySettings> = {}
@@ -475,6 +480,39 @@ route('/api/litgraph/settings', ['GET', 'HEAD', 'PUT'], async (req, res, { store
       }
       patch.metricsEnabled = input.metricsEnabled
     }
+    if (input.insightScope !== undefined) {
+      if (input.insightScope !== 'cluster' && input.insightScope !== 'group' && input.insightScope !== 'all') {
+        respondJson(res, 400, { error: "insightScope must be 'cluster', 'group' or 'all'" })
+        return
+      }
+      patch.insightScope = input.insightScope
+    }
+    if (input.insightRecentYears !== undefined) {
+      if (
+        typeof input.insightRecentYears !== 'number' ||
+        !Number.isFinite(input.insightRecentYears) ||
+        input.insightRecentYears < 1 ||
+        input.insightRecentYears > 30
+      ) {
+        respondJson(res, 400, { error: 'insightRecentYears must be a number between 1 and 30' })
+        return
+      }
+      patch.insightRecentYears = Math.round(input.insightRecentYears)
+    }
+    if (input.insightSaveNotes !== undefined) {
+      if (typeof input.insightSaveNotes !== 'boolean') {
+        respondJson(res, 400, { error: 'insightSaveNotes must be a boolean' })
+        return
+      }
+      patch.insightSaveNotes = input.insightSaveNotes
+    }
+    if (input.insightPrecompute !== undefined) {
+      if (typeof input.insightPrecompute !== 'boolean') {
+        respondJson(res, 400, { error: 'insightPrecompute must be a boolean' })
+        return
+      }
+      patch.insightPrecompute = input.insightPrecompute
+    }
     if (Object.keys(patch).length === 0) {
       respondJson(res, 400, { error: 'nothing to update' })
       return
@@ -485,6 +523,41 @@ route('/api/litgraph/settings', ['GET', 'HEAD', 'PUT'], async (req, res, { store
   }
   const settings = await store.getSettings()
   respondJson(res, 200, { ok: true, settings })
+})
+
+route('/api/litgraph/insight', ['GET', 'HEAD'], async (req, res, { store, pipeline }) => {
+  const url = requestUrl(req)
+  const settings = await store.getSettings()
+  const scopeParam = url.searchParams.get('scope')
+  const scope: InsightScope =
+    scopeParam === 'cluster' || scopeParam === 'group' || scopeParam === 'all'
+      ? scopeParam
+      : settings.insightScope ?? 'cluster'
+  const clusterId = url.searchParams.get('cluster') ?? url.searchParams.get('clusterId')
+  const yearsParam = Number(url.searchParams.get('recentYears'))
+  const recentYears =
+    Number.isFinite(yearsParam) && yearsParam >= 1
+      ? Math.min(30, Math.round(yearsParam))
+      : settings.insightRecentYears ?? 3
+  const refreshParam = url.searchParams.get('refresh')
+  const refresh = refreshParam === '1' || refreshParam === 'true'
+  try {
+    const payload = await buildInsight(
+      { store, graph: await pipeline.getGraph(), analyzer: pipeline.analyzerService },
+      { scope, clusterId: clusterId !== null && clusterId !== '' ? clusterId : null, recentYears, refresh },
+    )
+    respondJson(res, 200, payload)
+  } catch (error) {
+    if (error instanceof InsightError) {
+      respondJson(res, error.code === 'NO_PAPERS' || error.code === 'NO_CLUSTER' ? 422 : 400, {
+        ok: false,
+        code: error.code,
+        error: error.message,
+      })
+      return
+    }
+    respondJson(res, 502, { ok: false, code: 'INSIGHT_FAILED', error: errorMessage(error) })
+  }
 })
 
 route('/api/litgraph/open', ['POST'], async (req, res, { store }) => {

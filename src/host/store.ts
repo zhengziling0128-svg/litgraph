@@ -38,6 +38,8 @@ interface LibraryFile {
 
 export type TaxonomyMode = 'free' | 'fixed'
 
+export type InsightScope = 'cluster' | 'group' | 'all'
+
 export type OcrEngine = 'auto' | 'windows' | 'model'
 
 export interface LibrarySettings {
@@ -53,9 +55,25 @@ export interface LibrarySettings {
   metricsEnabled?: boolean
   /** Local Zotero API key (obtained via /api/local/authorize); empty means "not authorized yet". */
   zoteroApiKey?: string
+  /** 洞察默认作用域: current cluster / whole discipline / all papers. */
+  insightScope?: InsightScope
+  /** "近期"窗口（年）用于趋势判定，默认 3。 */
+  insightRecentYears?: number
+  /** 灵感卡是否可一键存进证据论文的笔记。 */
+  insightSaveNotes?: boolean
+  /** 打开洞察时是否后台补齐其它聚类的缓存（默认 false，只生成当前聚类）。 */
+  insightPrecompute?: boolean
 }
 
-const DEFAULT_SETTINGS: LibrarySettings = { taxonomyMode: 'free', clusterLevel: 2, metricsEnabled: true }
+const DEFAULT_SETTINGS: LibrarySettings = {
+  taxonomyMode: 'free',
+  clusterLevel: 2,
+  metricsEnabled: true,
+  insightScope: 'cluster',
+  insightRecentYears: 3,
+  insightSaveNotes: true,
+  insightPrecompute: false,
+}
 
 export interface TaxonomyUpdate {
   created: string[]
@@ -140,6 +158,10 @@ export class LibraryStore {
           metricsSecretKey?: unknown
           metricsEnabled?: unknown
           zoteroApiKey?: unknown
+          insightScope?: unknown
+          insightRecentYears?: unknown
+          insightSaveNotes?: unknown
+          insightPrecompute?: unknown
         }
         if (raw.taxonomyMode === 'free' || raw.taxonomyMode === 'fixed') {
           this.settings = { ...this.settings, taxonomyMode: raw.taxonomyMode }
@@ -158,6 +180,18 @@ export class LibraryStore {
         }
         if (typeof raw.zoteroApiKey === 'string' && raw.zoteroApiKey.trim() !== '') {
           this.settings = { ...this.settings, zoteroApiKey: raw.zoteroApiKey.trim().slice(0, 200) }
+        }
+        if (raw.insightScope === 'cluster' || raw.insightScope === 'group' || raw.insightScope === 'all') {
+          this.settings = { ...this.settings, insightScope: raw.insightScope }
+        }
+        if (typeof raw.insightRecentYears === 'number' && raw.insightRecentYears >= 1 && raw.insightRecentYears <= 30) {
+          this.settings = { ...this.settings, insightRecentYears: Math.round(raw.insightRecentYears) }
+        }
+        if (typeof raw.insightSaveNotes === 'boolean') {
+          this.settings = { ...this.settings, insightSaveNotes: raw.insightSaveNotes }
+        }
+        if (typeof raw.insightPrecompute === 'boolean') {
+          this.settings = { ...this.settings, insightPrecompute: raw.insightPrecompute }
         }
       }
       if (Array.isArray(data.papers)) {
@@ -470,6 +504,18 @@ export class LibraryStore {
       if (typeof patch.zoteroApiKey === 'string') {
         const trimmed = patch.zoteroApiKey.trim().slice(0, 200)
         this.settings = { ...this.settings, zoteroApiKey: trimmed === '' ? undefined : trimmed }
+      }
+      if (patch.insightScope === 'cluster' || patch.insightScope === 'group' || patch.insightScope === 'all') {
+        this.settings = { ...this.settings, insightScope: patch.insightScope }
+      }
+      if (typeof patch.insightRecentYears === 'number' && patch.insightRecentYears >= 1 && patch.insightRecentYears <= 30) {
+        this.settings = { ...this.settings, insightRecentYears: Math.round(patch.insightRecentYears) }
+      }
+      if (typeof patch.insightSaveNotes === 'boolean') {
+        this.settings = { ...this.settings, insightSaveNotes: patch.insightSaveNotes }
+      }
+      if (typeof patch.insightPrecompute === 'boolean') {
+        this.settings = { ...this.settings, insightPrecompute: patch.insightPrecompute }
       }
       return { ...this.settings }
     })

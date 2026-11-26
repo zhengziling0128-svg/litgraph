@@ -28,6 +28,12 @@ DeepSeek Harness 插件：文献知识图谱工作台。中间星空知识图谱
   星系/星座标题用贪心排布避让，不会互相压字。
 - **聚类粒度**：设置里可切换 一级（宽学科）/ 二级（子领域，默认）/ 三级（具体主题），星图按新粒度重聚类。
 - **时间轴**：按年份分层展示，年份未知的单列在底部。
+- **洞察**（第三个视图，回答「库内这类研究都在用什么方法、哪些在变热」）：作用域可选 当前聚类 / 同一学科 /
+  全部文献（设置里定默认，默认当前聚类），近期窗口 3/5/10 年（默认 3 年）。展示共同研究对象、方法雷达
+  （篇数 / 首次出现年份 / 近期占比 / 趋势：新出现·升温·平稳·退潮 / 平均评分）、方法演进、已解决与局限、
+  空白方法×问题组合、值得尝试的研究问题。内容全部由本库论文统计 + 一次模型调用得出，结果缓存在
+  `<数据根>/insights/`；每条结论都带证据论文 chips，点击可跳回星图；卡片可存进论文笔记或导出 Markdown。
+  页面顶部明写「基于本库 N 篇的统计与推测，不是学界研究前沿」。
 - **详情栏**：标题/作者/年份/会议/分类/图中关联数/页面统计/摘要/AI 总结；可编辑笔记、标签；
   1–5 星评分（评分 ≥1 自动算星标，再点同一颗星清零）；期刊指标卡（影响因子 / 5 年 IF / JCR 分区 /
   中科院分区 + TOP 徽标 / 小类 / ESI，来自 easyScholar，可点「重新查询指标」）；
@@ -53,8 +59,9 @@ DeepSeek Harness 插件：文献知识图谱工作台。中间星空知识图谱
 ## 结构
 
 - `src/host/` —— 宿主半区（cordis 插件，ESM）：HTTP 路由、存储、导入管线、LLM、建图、OCR、Zotero、
-  期刊指标（`metrics.ts`）、打开原文（`open.ts`）。
-- `src/client/` —— Web 半区（CJS 模块联邦工厂）：三栏 UI、星图 SVG + 力导向布局、详情、列表、时间轴、Zotero 弹窗。
+  期刊指标（`metrics.ts`）、库内趋势聚合（`insights.ts`）、打开原文（`open.ts`）。
+- `src/client/` —— Web 半区（CJS 模块联邦工厂）：三栏 UI、星图 SVG + 力导向布局、详情、列表、时间轴、洞察视图、
+  Zotero 弹窗。
 - `lib/index.js`（+ `pdfjs-*.js` 分块）与 `lib/client.js` —— 构建产物（`npm run build`，tsdown）。
   **安装/更新时 `lib/` 下的 pdfjs 分块必须和 index.js 一起拷走**。
 - 数据根：`%USERPROFILE%\.dsh\litgraph`（`papers/` 索引 JSON、`sources/` 原件、`tmp/`、`settings`）。
@@ -123,7 +130,9 @@ npm run install:desktop
 | `LITGRAPH_ZOTERO_DATA_DIR` | Zotero 数据目录 | `%USERPROFILE%\Zotero`，识别失败时读 Zotero prefs |
 
 设置项（`GET|PUT /api/litgraph/settings`，UI 在右栏设置弹窗）：`taxonomyMode`（`free`/`fixed`）、
-`clusterLevel`（1/2/3）、`ocrEngine`（`auto`/`model`/`windows`）、`metricsSecretKey`、`metricsEnabled`。
+`clusterLevel`（1/2/3）、`ocrEngine`（`auto`/`model`/`windows`）、`metricsSecretKey`、`metricsEnabled`，
+以及洞察默认值 `insightScope`（`cluster`/`group`/`all`）、`insightRecentYears`（1–30）、`insightSaveNotes`、
+`insightPrecompute`。
 
 ## 数据与隐私
 
@@ -138,7 +147,7 @@ npm run install:desktop
 ```powershell
 npm run build
 npm run smoke                   # 前端 bundle：22 项（渲染/搜索/详情/分页/拖拽上传）
-node scripts/test-host.mjs      # 宿主半区：155 项（真实 PDF、模拟 LLM、去重、持久化、Zotero 路径、评分/设置/打开原文/指标）
+node scripts/test-host.mjs      # 宿主半区：160 项（真实 PDF、模拟 LLM、去重、持久化、Zotero 路径、评分/设置/打开原文/指标）
 node scripts/seed-scale.mjs --root <dataRoot> --count 1000 --clusters 12 --seed 7   # 合成千篇压测库
 ```
 
@@ -185,6 +194,9 @@ node scripts/seed-scale.mjs --root <dataRoot> --count 1000 --clusters 12 --seed 
   未授权时打开原文仍可用（Zotero 自己会更新「最后阅读时间」），但「修改日期」和分类不会写回。
 - **Zotero**：**Zotero 导入**：Zotero 的本地 API 未启用（`/api/users/0/items` 403）时回退为只读 `zotero.sqlite`
   副本；Zotero 的 WAL 意味着最近几分钟的改动可能不在副本里，导入前请重新扫描。
+- **洞察**：只统计本库已有论文（背后没有引文数据库），每次生成最多取 60 篇做样本、一次模型调用（5–20 秒，
+  约 ¥0.01），按「作用域 + 提示词版本」缓存；导入新论文后点「重新生成」才更新。「空白组合 / 研究问题」是
+  头脑风暴式的推测，不是事实结论。
 - **规模**：1000 篇实测节点进 DOM 约 239ms、滚轮无长任务、9 子领域 / 5 星系；上万篇时 SVG 仍会吃 CPU
   （总览隐藏标签与标题、放大才显示，已按这个思路优化，暂未做 canvas/虚拟化）。
 
@@ -196,10 +208,14 @@ node scripts/seed-scale.mjs --root <dataRoot> --count 1000 --clusters 12 --seed 
   （`sort` 支持 `rating`；`minRating` 1–5 过滤）
 - `GET|PATCH|DELETE /api/litgraph/paper?id=` —— 详情；PATCH 改 `notes/tags/starred/rating(0–5)`
 - `GET|PUT /api/litgraph/settings` —— `taxonomyMode: 'free' | 'fixed'`、`clusterLevel: 1 | 2 | 3`、
-  `ocrEngine: 'auto' | 'windows' | 'model'`、`metricsSecretKey`、`metricsEnabled`
+  `ocrEngine: 'auto' | 'windows' | 'model'`、`metricsSecretKey`、`metricsEnabled`，以及洞察默认值
+  `insightScope` / `insightRecentYears` / `insightSaveNotes` / `insightPrecompute`
 - `POST /api/litgraph/open` —— `{id}` → 用 Zotero 阅读器或系统默认程序打开原件（无文件返回 404 `no file`）
 - `POST /api/litgraph/metrics/refresh` —— `{ids?}` 排队抓期刊指标（省略 ids 则全部）
 - `GET /api/litgraph/metrics/probe?venue=` —— 直接查一个期刊/会议名，便于排查
+- `GET /api/litgraph/insight?scope&cluster&recentYears&refresh` —— 单个作用域的统计 + 一次模型调用
+  （`scope` 为 `cluster`/`group`/`all`，可选 `refresh=1`）；结果缓存在 `<数据根>/insights/`，作用域内没有
+  ready 论文时返回 422
 - `POST /api/litgraph/upload` —— raw PDF + `x-litgraph-filename`，返回 jobId/paperId/duplicate
 - `GET /api/litgraph/job?id=` —— 导入进度
 - `GET /api/litgraph/file?id=` —— 原件
