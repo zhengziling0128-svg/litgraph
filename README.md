@@ -16,6 +16,7 @@ DeepSeek Harness 插件：文献知识图谱工作台。中间星空知识图谱
 | 详情：已读状态 / 五星评分 / 期刊指标 | 时间轴视图 |
 | --- | --- |
 | ![详情](docs/screenshots/03-detail-read-metrics.png) | ![时间轴](docs/screenshots/04-timeline.png) |
+
 ## 功能
 
 - **星图**：三层「星系 → 星座 → 论文」布局 —— 星系是按一级学科聚出的云团（彩色星云 + 领域标题），
