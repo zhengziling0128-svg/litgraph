@@ -3,7 +3,7 @@
 [English](README.md) · **中文**
 
 DeepSeek Harness 插件：文献知识图谱工作台。中间星空知识图谱（按学科/支线分星座）、顶上搜索、
-左栏文献详情、右栏论文库（排序/分页/星标/标签/聚类筛选），另有时间轴视图。
+左栏文献详情、右栏论文库（排序/分页/星标/标签/聚类筛选），中央另有 AI 洞察视图（库内研究趋势）。
 把 PDF 拖进面板（或点「导入」，或从 Zotero 批量导入）→ 解析文本（扫描件默认交给模型视觉逐页转录）→ 让模型理解
 （元数据、中文摘要、关键词、分类树）→ 入库并点亮星图。
 
@@ -15,9 +15,9 @@ DeepSeek Harness 插件：文献知识图谱工作台。中间星空知识图谱
 | --- | --- |
 | ![浅色星图](docs/screenshots/01-star-map-light.png) | ![深色星图](docs/screenshots/02-star-map-dark.png) |
 
-| 详情：已读状态 / 五星评分 / 期刊指标 | 时间轴视图 |
+| 详情：已读状态 / 五星评分 / 期刊指标 | 洞察：库内研究趋势 |
 | --- | --- |
-| ![详情](docs/screenshots/03-detail-read-metrics.png) | ![时间轴](docs/screenshots/04-timeline.png) |
+| ![详情](docs/screenshots/03-detail-read-metrics.png) | ![洞察](docs/screenshots/04-insight-light.png) |
 
 ## 功能
 
@@ -27,7 +27,6 @@ DeepSeek Harness 插件：文献知识图谱工作台。中间星空知识图谱
   1000 篇实测 239ms 完成渲染、滚轮无长任务；总览只画节点，放大后才出标题与节点标签，
   星系/星座标题用贪心排布避让，不会互相压字。
 - **聚类粒度**：设置里可切换 一级（宽学科）/ 二级（子领域，默认）/ 三级（具体主题），星图按新粒度重聚类。
-- **时间轴**：按年份分层展示，年份未知的单列在底部。
 - **洞察**（第三个视图，回答「库内这类研究都在用什么方法、哪些在变热」）：作用域可选 当前聚类 / 同一学科 /
   全部文献（设置里定默认，默认当前聚类），近期窗口 3/5/10 年（默认 3 年）。展示共同研究对象、方法雷达
   （篇数 / 首次出现年份 / 近期占比 / 趋势：新出现·升温·平稳·退潮 / 平均评分）、方法演进、已解决与局限、
@@ -60,7 +59,7 @@ DeepSeek Harness 插件：文献知识图谱工作台。中间星空知识图谱
 
 - `src/host/` —— 宿主半区（cordis 插件，ESM）：HTTP 路由、存储、导入管线、LLM、建图、OCR、Zotero、
   期刊指标（`metrics.ts`）、库内趋势聚合（`insights.ts`）、打开原文（`open.ts`）。
-- `src/client/` —— Web 半区（CJS 模块联邦工厂）：三栏 UI、星图 SVG + 力导向布局、详情、列表、时间轴、洞察视图、
+- `src/client/` —— Web 半区（CJS 模块联邦工厂）：三栏 UI、星图 SVG + 力导向布局、详情、列表、洞察视图、
   Zotero 弹窗。
 - `lib/index.js`（+ `pdfjs-*.js` 分块）与 `lib/client.js` —— 构建产物（`npm run build`，tsdown）。
   **安装/更新时 `lib/` 下的 pdfjs 分块必须和 index.js 一起拷走**。
@@ -76,14 +75,14 @@ DeepSeek Harness 插件：文献知识图谱工作台。中间星空知识图谱
 
 ## 版本
 
-当前版本：**0.2.0** — 变更见 [CHANGELOG.md](CHANGELOG.md)。
+当前版本：**0.3.0** — 变更见 [CHANGELOG.md](CHANGELOG.md)。
 
 版本号用语义化版本：`MAJOR` 表示数据或接口不兼容，`MINOR` 表示新增功能，`PATCH` 表示修复。
-运行中的版本显示在窗口底部提示条右侧（`v0.2.0`），`GET /api/litgraph/status` 也有 `version` 字段，
+运行中的版本显示在窗口底部提示条右侧（`v0.3.0`），`GET /api/litgraph/status` 也有 `version` 字段，
 因此能一眼看出界面和宿主进程各自是哪个构建；`npm run install:desktop` 会同时打印磁盘版本和运行版本。
 
 发版流程：改 `package.json` 里的 `version` → 在 `CHANGELOG.md` 加一节 → `npm run build` →
-`git tag v0.2.0 && git push --tags` → `gh release create v0.2.0 --notes-file <notes>`。
+`git tag v0.3.0 && git push --tags` → `gh release create v0.3.0 --notes-file <notes>`。
 
 ## 安装
 

@@ -1,7 +1,7 @@
 
 /**
  * LitGraph feature add-ons: notes / tags / star, library filters + export menu,
- * the settings dialog, and the timeline view.
+ * the settings dialog.
  *
  * Kept in its own stylesheet (injected once by ensureFeatureStyles) so the main
  * styles.ts stays owned by the theme work. Everything reads the shared --lg-*
@@ -209,87 +209,6 @@ span.lgf-tag-label { cursor: default; }
 .lgf-modal-loading, .lgf-modal-error { font-size: calc(12px * var(--lg-fs-scale)); color: var(--lg-dim); line-height: 1.6; }
 .lgf-modal-error { color: var(--lg-danger); }
 .lgf-modal-foot { display: flex; align-items: center; justify-content: flex-end; gap: 8px; padding: 11px 15px 13px; border-top: 1px solid var(--lg-border); }
-
-/* ================= timeline view ================= */
-.lgf-timeline {
-  --lgf-lane-label: 122px;
-  display: flex; flex-direction: column; gap: 10px;
-  height: 100%; min-height: 0; padding: 14px 16px 16px; box-sizing: border-box;
-}
-.lgf-timeline-head {
-  display: flex; align-items: center; gap: 10px; flex: 0 0 auto;
-  min-height: 34px; padding-left: 150px; box-sizing: border-box;
-}
-.lgf-timeline-heading { display: flex; flex-direction: column; min-width: 0; }
-.lgf-timeline-title { font-size: calc(15px * var(--lg-fs-scale)); font-weight: 650; letter-spacing: 0.4px; color: var(--lg-text); }
-.lgf-timeline-sub {
-  margin-top: 2px; font-size: calc(11.5px * var(--lg-fs-scale)); color: var(--lg-dim);
-  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-}
-.lgf-timeline-actions { margin-left: auto; display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
-.lgf-timeline-body { flex: 1 1 auto; min-height: 0; overflow: auto; padding-right: 2px; display: flex; flex-direction: column; }
-.lgf-timeline-plot {
-  position: relative; display: flex; flex-direction: column;
-  flex: 1 1 auto; min-width: 100%; min-height: 320px;
-}
-.lgf-lanes { flex: 1 1 auto; min-height: 220px; display: flex; flex-direction: column; }
-.lgf-lane { display: flex; align-items: stretch; flex: 1 1 0; min-height: 64px; }
-.lgf-lane + .lgf-lane { border-top: 1px solid var(--lg-border); }
-.lgf-lane-label {
-  flex: 0 0 var(--lgf-lane-label); width: var(--lgf-lane-label); box-sizing: border-box;
-  display: flex; align-items: center; gap: 6px; padding: 5px 10px 5px 2px;
-  font-size: calc(11.5px * var(--lg-fs-scale)); color: var(--lg-muted);
-}
-.lgf-lane-label span { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.lgf-lane-dot { flex: 0 0 auto; width: 7px; height: 7px; border-radius: 50%; box-shadow: 0 0 6px currentColor; }
-.lgf-lane-count { flex: 0 0 auto; margin-left: auto; font-style: normal; font-size: calc(10.5px * var(--lg-fs-scale)); color: var(--lg-dim); }
-.lgf-lane-track { position: relative; flex: 1 1 auto; min-width: 220px; border-left: 1px solid var(--lg-border); }
-.lgf-lane-line { position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: var(--lg-border); opacity: 0.4; pointer-events: none; }
-.lgf-grid-line { position: absolute; top: 0; bottom: 0; width: 1px; background: var(--lg-border); opacity: 0.28; pointer-events: none; }
-.lgf-point {
-  position: absolute; width: 11px; height: 11px; margin: 0; padding: 0;
-  border-radius: 50%; border: 1.5px solid var(--lg-panel-solid);
-  background: var(--lg-cyan); transform: translate(-50%, -50%);
-  cursor: pointer; transition: transform 120ms ease, box-shadow 120ms ease;
-}
-.lgf-point:hover, .lgf-point:focus-visible {
-  transform: translate(-50%, -50%) scale(1.35); outline: none; z-index: 3;
-  box-shadow: 0 0 0 3px var(--lg-cyan-soft), 0 0 12px currentColor;
-}
-.lgf-point.is-selected {
-  z-index: 4; border-color: var(--lg-accent);
-  box-shadow: 0 0 0 3px var(--lg-accent-soft), 0 0 14px var(--lg-accent-border);
-}
-.lgf-axis { display: flex; align-items: stretch; flex: 0 0 auto; height: 30px; margin-top: 4px; }
-.lgf-axis-spacer { flex: 0 0 var(--lgf-lane-label); width: var(--lgf-lane-label); }
-.lgf-axis-track { position: relative; flex: 1 1 auto; min-width: 220px; border-left: 1px solid var(--lg-border); border-top: 1px solid var(--lg-border); }
-.lgf-axis-label { position: absolute; top: 6px; font-size: calc(10.5px * var(--lg-fs-scale)); color: var(--lg-dim); white-space: nowrap; }
-.lgf-unknown {
-  flex: 0 0 auto; display: flex; flex-direction: column; gap: 7px; margin-top: 10px; padding: 10px 12px;
-  border-radius: var(--lg-radius); border: 1px dashed var(--lg-border); background: var(--lg-panel-raised);
-}
-.lgf-unknown-title { font-size: calc(11.5px * var(--lg-fs-scale)); color: var(--lg-dim); }
-.lgf-unknown-list { display: flex; flex-wrap: wrap; gap: 5px; }
-.lgf-unknown-chip {
-  max-width: 240px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
-  padding: 2px 8px; border-radius: 999px; border: 1px solid var(--lg-border);
-  background: var(--lg-chip-bg); color: var(--lg-muted);
-  font-family: var(--lg-font); font-size: calc(11px * var(--lg-fs-scale)); cursor: pointer;
-}
-.lgf-unknown-chip:hover { color: var(--lg-text); border-color: var(--lg-cyan-border); }
-.lgf-unknown-chip.is-selected { color: var(--lg-text); border-color: var(--lg-cyan); background: var(--lg-cyan-soft); }
-.lgf-timeline-empty { flex: 1 1 auto; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; text-align: center; }
-.lgf-timeline-empty-title { font-size: calc(15px * var(--lg-fs-scale)); color: var(--lg-muted); }
-.lgf-timeline-empty-hint { max-width: 330px; font-size: calc(12px * var(--lg-fs-scale)); line-height: 1.7; color: var(--lg-dim); }
-.lgf-timeline-tip { transform: translate(-50%, calc(-100% - 10px)); }
-@container (max-width: 900px) {
-  .lgf-timeline { --lgf-lane-label: 88px; padding: 11px 12px 13px; }
-  .lgf-point { width: 10px; height: 10px; }
-}
-@container (max-width: 720px) {
-  .lgf-timeline-head { padding-left: 0; padding-top: 36px; align-items: flex-start; }
-  .lgf-timeline-sub { white-space: normal; }
-}
 
 /* ================= 5-star rating + journal metrics ================= */
 .lgf-rating { display: inline-flex; align-items: center; gap: 1px; margin-right: 2px; }

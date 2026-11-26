@@ -31,7 +31,6 @@ import { StarMap } from './components/StarMap'
 import { SearchBar } from './components/SearchBar'
 import { DetailPanel } from './components/DetailPanel'
 import { LibraryPanel } from './components/LibraryPanel'
-import { TimelineView, buildTimelineNodes } from './components/TimelineView'
 import { InsightView } from './components/InsightView'
 import { ZoteroImport } from './components/ZoteroImport'
 import { Toasts } from './components/Toasts'
@@ -111,8 +110,8 @@ export function Workbench() {
     }
   }, [graph, activeCluster])
 
-  // ---- center view (star map / year timeline / insight) ----------------------
-  const [viewMode, setViewMode] = React.useState<'graph' | 'timeline' | 'insight'>('graph')
+  // ---- center view (star map / insight) -------------------------------------
+  const [viewMode, setViewMode] = React.useState<'graph' | 'insight'>('graph')
   const [insightSettingsToken, setInsightSettingsToken] = React.useState(0)
   const [zoteroOpen, setZoteroOpen] = React.useState(false)
 
@@ -144,10 +143,6 @@ export function Workbench() {
 
   const layout = React.useMemo(() => computeLayout({ nodes: graph ? graph.nodes : [], edges: graph ? graph.edges : [], clusters: graph ? graph.clusters : [], seed }), [graph, seed])
   const stars = React.useMemo(() => makeStars(seed, 150), [seed])
-  const timelineNodes = React.useMemo(
-    () => buildTimelineNodes(graph ? graph.nodes : [], graph ? graph.clusters : []),
-    [graph],
-  )
 
   const pushToast = React.useCallback((kind: ToastItem['kind'], message: string, ttl = 4200) => {
     const id = nextToastId()
@@ -672,15 +667,6 @@ export function Workbench() {
             <button
               type="button"
               role="tab"
-              aria-selected={viewMode === 'timeline'}
-              className={'lg-view-btn' + (viewMode === 'timeline' ? ' is-active' : '')}
-              onClick={() => setViewMode('timeline')}
-            >
-              时间轴
-            </button>
-            <button
-              type="button"
-              role="tab"
               aria-selected={viewMode === 'insight'}
               className={'lg-view-btn' + (viewMode === 'insight' ? ' is-active' : '')}
               onClick={() => setViewMode('insight')}
@@ -689,14 +675,7 @@ export function Workbench() {
             </button>
           </div>
 
-          {viewMode === 'timeline' ? (
-            <TimelineView
-              nodes={timelineNodes}
-              selectedId={selectedId}
-              onSelect={selectPaper}
-              onClear={() => selectPaper(null)}
-            />
-          ) : viewMode === 'insight' ? (
+          {viewMode === 'insight' ? (
             <InsightView
               graph={graph}
               selectedId={selectedId}
