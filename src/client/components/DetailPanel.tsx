@@ -631,34 +631,6 @@ export function DetailPanel(props: DetailPanelProps) {
         {tagHint ? <div className="lgf-hint is-error">{tagHint}</div> : <div className="lgf-hint">回车添加、点 × 删除；点击标签可按它筛选论文库</div>}
       </Collapsible>
 
-      {detail.summary ? (
-        <Collapsible title="AI 总结">
-          <p className="lg-detail-prose">{detail.summary}</p>
-        </Collapsible>
-      ) : null}
-
-      {detail.contributions.length > 0 ? (
-        <Collapsible title="主要贡献">
-          <ul className="lg-detail-bullets">
-            {detail.contributions.map((item, index) => (
-              <li key={index}>{item}</li>
-            ))}
-          </ul>
-        </Collapsible>
-      ) : null}
-
-      {detail.method ? (
-        <Collapsible title="方法">
-          <p className="lg-detail-prose">{detail.method}</p>
-        </Collapsible>
-      ) : null}
-
-      {detail.abstract ? (
-        <Collapsible title="摘要">
-          <p className="lg-detail-prose">{detail.abstract}</p>
-        </Collapsible>
-      ) : null}
-
       {detail.keywords.length > 0 ? (
         <Collapsible title="关键词">
           <div className="lg-detail-chips">
@@ -718,6 +690,34 @@ export function DetailPanel(props: DetailPanelProps) {
           </>
         )}
       </Collapsible>
+
+      {detail.summary ? (
+        <Collapsible title="AI 总结">
+          <p className="lg-detail-prose">{detail.summary}</p>
+        </Collapsible>
+      ) : null}
+
+      {detail.contributions.length > 0 ? (
+        <Collapsible title="主要贡献">
+          <ul className="lg-detail-bullets">
+            {detail.contributions.map((item, index) => (
+              <li key={index}>{item}</li>
+            ))}
+          </ul>
+        </Collapsible>
+      ) : null}
+
+      {detail.method ? (
+        <Collapsible title="方法">
+          <p className="lg-detail-prose">{detail.method}</p>
+        </Collapsible>
+      ) : null}
+
+      {detail.abstract ? (
+        <Collapsible title="摘要">
+          <p className="lg-detail-prose">{detail.abstract}</p>
+        </Collapsible>
+      ) : null}
 
       <Collapsible
         title="Zotero"

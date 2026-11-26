@@ -3,6 +3,14 @@
 All notable changes to LitGraph. Version numbers follow [semantic versioning](https://semver.org/):
 `MAJOR` for breaking data/API changes, `MINOR` for new features, `PATCH` for fixes.
 
+## 0.3.1 — 2026-11-26
+
+### Changed
+
+- Detail panel order: **keywords** and **journal metrics** now sit directly under **tags**, before the AI
+  summary. Notes → tags → keywords → metrics → AI summary → contributions → method → abstract → Zotero →
+  source.
+
 ## 0.3.0 — 2026-11-26
 
 ### Changed (docs/showcase only — no behaviour change)
