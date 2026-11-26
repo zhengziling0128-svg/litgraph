@@ -377,6 +377,8 @@ export function Workbench() {
     void openPaper(id)
       .then((result) => {
         if (result.ok) {
+          // "Recently opened" sort is host-side; refresh so the list reorders.
+          setRefreshToken((value) => value + 1)
           const message =
             result.via === 'zotero'
               ? '已在 Zotero 中打开'

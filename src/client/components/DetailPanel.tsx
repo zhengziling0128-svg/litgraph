@@ -9,6 +9,7 @@ import {
   fetchZoteroState,
   refreshMetrics,
   setPaperCollections,
+  uploadNotesAsset,
   syncZotero,
   updatePaper,
 } from '../api'
@@ -43,6 +44,8 @@ const NOTES_MAX = 20000
 const TAGS_MAX = 24
 const TAG_LEN_MAX = 40
 const NOTES_DEBOUNCE_MS = 800
+/** Pasted crops live in the notes as one markdown image line: ![截图](/api/litgraph/notes-asset?…). */
+const NOTES_IMAGE_RE = /^!\[[^\]]*\]\((\/api\/litgraph\/notes-asset\?[^)\s]+)\)$/u
 const RATING_VALUES: number[] = [1, 2, 3, 4, 5]
 /** After POST /metrics/refresh, poll GET /paper until metrics appear. */
 const METRICS_POLL_INTERVAL_MS = 1200
@@ -58,6 +61,8 @@ export function DetailPanel(props: DetailPanelProps) {
   const [notesDraft, setNotesDraft] = React.useState('')
   const [saveState, setSaveState] = React.useState<SaveState>('idle')
   const [saveError, setSaveError] = React.useState<string | null>(null)
+  const [notesMode, setNotesMode] = React.useState<'edit' | 'preview'>('edit')
+  const [imageBusy, setImageBusy] = React.useState(false)
   const [tags, setTags] = React.useState<string[]>([])
   const [tagDraft, setTagDraft] = React.useState('')
   const [tagHint, setTagHint] = React.useState<string | null>(null)
@@ -202,6 +207,8 @@ export function DetailPanel(props: DetailPanelProps) {
     setMetricsBusy(false)
     setMetricsHint(null)
     setMetricsOverride(null)
+    setNotesMode('edit')
+    setImageBusy(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paperId])
 
@@ -279,6 +286,53 @@ export function DetailPanel(props: DetailPanelProps) {
     }
     void saveNotes(id, notesDraft)
   }, [paperId, notesDraft, saveNotes])
+
+  /** Insert a pasted / dropped crop on its own line, then save immediately. */
+  const insertNotesImage = React.useCallback(
+    async (file: File, start: number, end: number) => {
+      const id = paperId
+      if (!id) return
+      setImageBusy(true)
+      try {
+        const asset = await uploadNotesAsset(id, file)
+        const snippet = '\n' + asset.markdown + '\n'
+        setNotesDraft((current) => {
+          const from = Math.max(0, Math.min(start, current.length))
+          const to = Math.max(from, Math.min(end, current.length))
+          const next = (current.slice(0, from) + snippet + current.slice(to)).slice(0, NOTES_MAX)
+          void saveNotes(id, next)
+          return next
+        })
+      } catch (caught) {
+        onToast?.('error', '图片上传失败：' + describeError(caught))
+      } finally {
+        setImageBusy(false)
+      }
+    },
+    [paperId, saveNotes, onToast],
+  )
+
+  const handleNotesPaste = (event: React.ClipboardEvent<HTMLTextAreaElement>): void => {
+    const item = Array.from(event.clipboardData.items).find((entry) => entry.type.startsWith('image/'))
+    if (!item) return
+    const file = item.getAsFile()
+    if (file === null) return
+    event.preventDefault()
+    const target = event.currentTarget
+    const start = target.selectionStart ?? notesDraft.length
+    const end = target.selectionEnd ?? start
+    void insertNotesImage(file, start, end)
+  }
+
+  const handleNotesDrop = (event: React.DragEvent<HTMLTextAreaElement>): void => {
+    const file = Array.from(event.dataTransfer.files).find((entry) => entry.type.startsWith('image/'))
+    if (!file) return
+    event.preventDefault()
+    const target = event.currentTarget
+    const start = target.selectionStart ?? notesDraft.length
+    const end = target.selectionEnd ?? start
+    void insertNotesImage(file, start, end)
+  }
 
   const applyPatch = React.useCallback(
     async (patch: PaperPatch): Promise<PaperDetail | null> => {
@@ -550,16 +604,44 @@ export function DetailPanel(props: DetailPanelProps) {
       </div>
 
       <Collapsible title="笔记" meta={<SaveIndicator state={saveState} error={saveError} onRetry={() => void saveNotes(detail.id, notesDraft)} />}>
-        <textarea
-          className="lgf-textarea"
-          value={notesDraft}
-          maxLength={NOTES_MAX}
-          rows={4}
-          placeholder="写下想法、复现要点或待读问题… 输入后自动保存"
-          aria-label="笔记"
-          onChange={(event) => setNotesDraft(event.target.value)}
-          onBlur={flushNotes}
-        />
+        <div className="lgf-notes-bar">
+          <button
+            type="button"
+            className={'lgf-notes-mode' + (notesMode === 'edit' ? ' is-active' : '')}
+            aria-pressed={notesMode === 'edit'}
+            onClick={() => setNotesMode('edit')}
+          >
+            编辑
+          </button>
+          <button
+            type="button"
+            className={'lgf-notes-mode' + (notesMode === 'preview' ? ' is-active' : '')}
+            aria-pressed={notesMode === 'preview'}
+            onClick={() => setNotesMode('preview')}
+          >
+            预览
+          </button>
+          {imageBusy ? <span className="lgf-hint">图片上传中…</span> : null}
+        </div>
+        {notesMode === 'edit' ? (
+          <textarea
+            className="lgf-textarea"
+            value={notesDraft}
+            maxLength={NOTES_MAX}
+            rows={4}
+            placeholder="写下想法、复现要点或待读问题… 输入后自动保存；Ctrl+V 可直接粘贴截图"
+            aria-label="笔记"
+            onChange={(event) => setNotesDraft(event.target.value)}
+            onBlur={flushNotes}
+            onPaste={handleNotesPaste}
+            onDrop={handleNotesDrop}
+            onDragOver={(event) => {
+              if (event.dataTransfer.types.includes('Files')) event.preventDefault()
+            }}
+          />
+        ) : (
+          <NotesPreview text={notesDraft} />
+        )}
         {saveState === 'error' && saveError ? (
           <div className="lgf-hint is-error">{saveError}</div>
         ) : (
@@ -836,9 +918,28 @@ export function DetailPanel(props: DetailPanelProps) {
           <dd>{formatTime(detail.addedAt)}</dd>
           <dt>最近更新</dt>
           <dd>{formatTime(detail.updatedAt)}</dd>
+          <dt>最近打开</dt>
+          <dd>{detail.lastOpenedAt ? formatTime(detail.lastOpenedAt) : '还没有打开过'}</dd>
         </dl>
       </Collapsible>
 
+    </div>
+  )
+}
+
+/** Markdown-lite notes renderer: plain lines stay lines, pasted crops expand to full width. */
+function NotesPreview(props: { text: string }) {
+  if (props.text.trim() === '') {
+    return <div className="lgf-notes-preview is-empty">还没有笔记。切到「编辑」，粘贴截图或写点想法。</div>
+  }
+  return (
+    <div className="lgf-notes-preview">
+      {props.text.split('\n').map((line, index) => {
+        const image = NOTES_IMAGE_RE.exec(line.trim())
+        if (image) return <img key={index} className="lgf-notes-image" src={image[1]} alt="笔记图片" loading="lazy" />
+        if (line.trim() === '') return <div key={index} className="lgf-notes-gap" />
+        return <p key={index} className="lgf-notes-line">{line}</p>
+      })}
     </div>
   )
 }

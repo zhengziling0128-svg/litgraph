@@ -67,8 +67,11 @@ export interface Paper {
   hasFile: boolean
   parseNote?: string
   relations?: PaperRelation[]
-  /** User notes, edited from the detail panel (max ~20k chars). */
+  /** User notes, edited from the detail panel (max ~20k chars). Markdown-lite: pasted crop images
+   *  become `![alt](/api/litgraph/notes-asset?...&f=...)` lines, the bytes live under <dataRoot>/notes-assets/. */
   notes?: string
+  /** Last time the original PDF was opened from the detail panel; metadata edits never touch it. */
+  lastOpenedAt?: string
   /** User tags; merged with LLM keywords in the UI but kept separate here. */
   tags?: string[]
   /** Starred / favourite flag. */

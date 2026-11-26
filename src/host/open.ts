@@ -251,11 +251,11 @@ export async function openPaper(paper: StoredPaper, store: LibraryStore, options
       const parentKey = typeof paper.zotero?.key === 'string' ? paper.zotero.key.trim() : ''
       const readAt = Math.floor(Date.now() / 1000)
       const zotero = { ...(paper.zotero ?? { key: '', attachmentKey }), lastRead: readAt }
-      await store.updatePaper(paper.id, { zotero })
+      await store.updatePaper(paper.id, { zotero }, { touch: false })
       if (apiKey !== '') {
         const lastRead = await markZoteroRead(attachmentKey, apiKey, parentKey)
         const dateModified = parentKey === '' ? zotero.dateModified : new Date(Date.now()).toISOString()
-        await store.updatePaper(paper.id, { zotero: { ...zotero, lastRead, dateModified } })
+        await store.updatePaper(paper.id, { zotero: { ...zotero, lastRead, dateModified } }, { touch: false })
       }
     } catch {
       /* read-time bookkeeping is best effort: opening the PDF already succeeded */

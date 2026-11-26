@@ -3,6 +3,24 @@
 All notable changes to LitGraph. Version numbers follow [semantic versioning](https://semver.org/):
 `MAJOR` for breaking data/API changes, `MINOR` for new features, `PATCH` for fixes.
 
+## 0.4.0 — 2026-11-26
+
+### Added
+
+- **Sort by "recently opened"**: opening a paper's PDF now stamps `lastOpenedAt`, and the library sort menu
+  gains **Recently opened** next to title / year / added / rating. Only "Open PDF" counts as a read — clicking a
+  row or a star-map node does not.
+- **Screenshots in notes**: paste (Ctrl+V) or drop an image into the notes box; it is stored under
+  `<data root>/notes-assets/<paperId>/` and inserted as its own markdown line
+  (`![截图](/api/litgraph/notes-asset?paperId=…&f=…)`), so the note text stays portable. Notes gain an
+  **Edit / Preview** switch that renders those images.
+- Detail panel → source block shows **最近打开** next to **最近更新**.
+
+### Changed
+
+- The library sort label "修改时间" is now **最后修改** to separate edits from reads: opening a PDF and the
+  background Zotero link sync no longer bump `updatedAt`.
+
 ## 0.3.1 — 2026-11-26
 
 ### Changed

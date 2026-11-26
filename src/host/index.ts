@@ -8,7 +8,8 @@
  */
 import { createReadStream, createWriteStream, promises as fsp } from 'node:fs'
 import type { IncomingMessage, ServerResponse } from 'node:http'
-import { basename, resolve as resolvePath } from 'node:path'
+import { basename, join, resolve as resolvePath } from 'node:path'
+import { randomUUID } from 'node:crypto'
 import { resolveConfig } from './config.js'
 import { categoryTop, type GraphData } from './graph.js'
 import { LlmAnalyzer } from './llm.js'
@@ -169,6 +170,36 @@ async function readJsonBody(req: IncomingMessage, maxBytes = 256 * 1024): Promis
   })
 }
 
+async function readRawBody(req: IncomingMessage, maxBytes: number): Promise<Buffer> {
+  return await new Promise<Buffer>((resolve, reject) => {
+    const chunks: Buffer[] = []
+    let size = 0
+    let settled = false
+    const fail = (error: Error): void => {
+      if (settled) return
+      settled = true
+      reject(error)
+    }
+    req.on('data', (chunk: Buffer | string) => {
+      if (settled) return
+      const bytes = typeof chunk === 'string' ? Buffer.from(chunk) : chunk
+      size += bytes.length
+      if (size > maxBytes) {
+        fail(new Error('request body too large'))
+        req.destroy()
+        return
+      }
+      chunks.push(bytes)
+    })
+    req.on('end', () => {
+      if (settled) return
+      settled = true
+      resolve(Buffer.concat(chunks))
+    })
+    req.on('error', (error) => fail(error))
+  })
+}
+
 function readUploadName(req: IncomingMessage): string {
   const raw = headerValue(req, 'x-litgraph-filename') ?? 'paper.pdf'
   let decoded = raw.trim()
@@ -229,6 +260,7 @@ function comparePapers(a: StoredPaper, b: StoredPaper, sort: string): number {
   if (sort === 'title') return a.title.localeCompare(b.title, 'zh-Hans-CN')
   if (sort === 'year') return (a.year ?? 0) - (b.year ?? 0)
   if (sort === 'addedAt') return a.addedAt.localeCompare(b.addedAt)
+  if (sort === 'lastOpenedAt') return (a.lastOpenedAt ?? '').localeCompare(b.lastOpenedAt ?? '')
   return a.updatedAt.localeCompare(b.updatedAt)
 }
 
@@ -257,6 +289,7 @@ function paperListItem(paper: StoredPaper, clusterId: string | undefined): Recor
     tags: paper.tags ?? [],
     starred: paper.starred === true,
     lastRead: paper.zotero?.lastRead ?? null,
+    lastOpenedAt: paper.lastOpenedAt ?? null,
     rating: paper.rating ?? 0,
     metrics:
       paper.metrics === undefined
@@ -297,7 +330,7 @@ route('/api/litgraph/graph', ['GET', 'HEAD'], async (req, res, { pipeline }) => 
 route('/api/litgraph/papers', ['GET', 'HEAD'], async (req, res, { store, pipeline }) => {
   const url = requestUrl(req)
   const sortInput = url.searchParams.get('sort') ?? 'updatedAt'
-  const sort = ['updatedAt', 'addedAt', 'title', 'year'].includes(sortInput) ? sortInput : 'updatedAt'
+  const sort = ['updatedAt', 'addedAt', 'lastOpenedAt', 'title', 'year'].includes(sortInput) ? sortInput : 'updatedAt'
   const order = url.searchParams.get('order') === 'asc' ? 'asc' : 'desc'
   const page = clampInt(url.searchParams.get('page'), 1, 1_000_000, 1)
   const pageSize = clampInt(url.searchParams.get('pageSize'), 1, 200, 50)
@@ -585,6 +618,11 @@ route('/api/litgraph/open', ['POST'], async (req, res, { store }) => {
   }
   const outcome = await openPaper(paper, store)
   if (outcome.ok) {
+    try {
+      await store.touchOpened(id)
+    } catch (error) {
+      console.warn('[litgraph] failed to record lastOpenedAt', error)
+    }
     respondJson(res, 200, outcome)
     return
   }
@@ -761,7 +799,9 @@ route('/api/litgraph/zotero/sync', ['POST'], async (req, res, { store }) => {
     for (const paper of papers) {
       const link = result.links[paper.id]
       if (link === undefined) continue
-      await store.updatePaper(paper.id, { zotero: link })
+      // Linking is bookkeeping, not an edit: keep "last modified" stable so a
+      // background Zotero sync does not reshuffle the library on every load.
+      await store.updatePaper(paper.id, { zotero: link }, { touch: false })
       updated += 1
     }
     respondJson(res, 200, { ok: true, matched: result.matched, total: result.total, items: result.items, updated })
@@ -874,6 +914,102 @@ route('/api/litgraph/upload', ['POST'], async (req, res, { store, pipeline, conf
     }
     throw error
   }
+})
+
+// -- paper note screenshots ------------------------------------------------
+
+/** Pasted crops are pasted as-is; 10 MB is far beyond a screenshot. */
+const NOTES_ASSET_MAX_BYTES = 10 * 1024 * 1024
+
+const NOTES_ASSET_EXT: Record<string, string> = {
+  'image/png': 'png',
+  'image/jpeg': 'jpg',
+  'image/jpg': 'jpg',
+  'image/webp': 'webp',
+  'image/gif': 'gif',
+}
+
+const NOTES_ASSET_TYPE: Record<string, string> = {
+  png: 'image/png',
+  jpg: 'image/jpeg',
+  webp: 'image/webp',
+  gif: 'image/gif',
+}
+
+route('/api/litgraph/notes-asset', ['POST'], async (req, res, { store }) => {
+  const paperId = requestUrl(req).searchParams.get('paperId') ?? ''
+  const paper = paperId === '' ? null : await store.getPaper(paperId)
+  if (paper === null) {
+    respondJson(res, 404, { error: 'paper not found', paperId })
+    return
+  }
+  const contentType = (headerValue(req, 'content-type') ?? '').split(';')[0].trim().toLowerCase()
+  const ext = NOTES_ASSET_EXT[contentType]
+  if (ext === undefined) {
+    respondJson(res, 415, { error: 'unsupported image type: ' + (contentType === '' ? 'unknown' : contentType) })
+    return
+  }
+  let data: Buffer
+  try {
+    data = await readRawBody(req, NOTES_ASSET_MAX_BYTES)
+  } catch (error) {
+    respondJson(res, 413, { error: errorMessage(error) })
+    return
+  }
+  if (data.length === 0) {
+    respondJson(res, 400, { error: 'empty image body' })
+    return
+  }
+  const dir = store.notesAssetDir(paperId)
+  await fsp.mkdir(dir, { recursive: true })
+  const name = Date.now().toString(36) + '-' + randomUUID().replace(/-/gu, '').slice(0, 8) + '.' + ext
+  await fsp.writeFile(join(dir, name), data)
+  const url = '/api/litgraph/notes-asset?paperId=' + encodeURIComponent(paperId) + '&f=' + encodeURIComponent(name)
+  respondJson(res, 200, { ok: true, url, markdown: '![截图](' + url + ')', size: data.length })
+})
+
+route('/api/litgraph/notes-asset', ['GET', 'HEAD'], async (req, res, { store }) => {
+  const url = requestUrl(req)
+  const paperId = url.searchParams.get('paperId') ?? ''
+  const file = url.searchParams.get('f') ?? ''
+  if (!/^p_[A-Za-z0-9]+$/u.test(paperId) || !/^[A-Za-z0-9._-]+$/u.test(file) || file.includes('..')) {
+    respondJson(res, 400, { error: 'bad asset reference' })
+    return
+  }
+  const ext = file.slice(file.lastIndexOf('.') + 1).toLowerCase()
+  const contentType = NOTES_ASSET_TYPE[ext]
+  if (contentType === undefined) {
+    respondJson(res, 400, { error: 'unsupported asset type' })
+    return
+  }
+  const dir = store.notesAssetDir(paperId)
+  const filePath = resolvePath(join(dir, file))
+  if (!filePath.startsWith(resolvePath(dir) + '\\')) {
+    respondJson(res, 400, { error: 'bad asset reference' })
+    return
+  }
+  let info
+  try {
+    info = await fsp.stat(filePath)
+  } catch {
+    respondJson(res, 404, { error: 'asset missing on disk' })
+    return
+  }
+  res.statusCode = 200
+  res.setHeader('content-type', contentType)
+  res.setHeader('content-length', String(info.size))
+  res.setHeader('cache-control', 'private, max-age=31536000, immutable')
+  if (req.method === 'HEAD') {
+    res.end()
+    return
+  }
+  const stream = createReadStream(filePath)
+  stream.on('error', (error) => {
+    console.warn('[litgraph] failed to stream note asset', error)
+    if (!res.headersSent) respondJson(res, 500, { error: 'failed to stream note asset' })
+    else res.destroy()
+  })
+  stream.pipe(res)
 })
 
 route('/api/litgraph/file', ['GET', 'HEAD'], async (req, res, { store, config }) => {

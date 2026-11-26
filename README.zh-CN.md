@@ -120,11 +120,13 @@ npm run install:desktop
 ## 交互速查
 
 - 滚轮缩放、拖拽平移、「重新布局」；顶部搜索命中节点呼吸光晕 + 右上 N/M 命中，回车打开第一条。
-- 点击节点：左栏详情；详情里可改笔记/标签、点星星评分（自动保存，列表与筛选即时更新）。
+- 点击节点：左栏详情；详情里可改笔记/标签、点星星评分（自动保存，列表与筛选即时更新）。笔记支持粘贴
+  （Ctrl+V）或拖入截图，图片存本机磁盘，由笔记区的「编辑 / 预览」切换渲染。
 - 详情「打开原文」：Zotero 导入的文献走 `zotero://open-pdf`（Zotero 内置阅读器，可做批注）；
   自己拖进来的 PDF 用系统默认阅读器打开。
 - 详情「期刊指标」：有指标直接显示 IF / JCR / 中科院分区；没有就点「查询指标」按会议/期刊名查 easyScholar。
-- 右栏：排序、翻页、聚类 chip（一行放不下时可直接用滚轮横向滚动，也有细滚动条）、仅星标、标签 chip、BibTeX、导入、Zotero。
+- 右栏：排序（**最后修改 / 最近打开 / 标题 / 年份 / 加入时间 / 评分**；「最近打开」只算点「打开原文」，点条目或节点不算）、
+  翻页、聚类 chip（一行放不下时可直接用滚轮横向滚动，也有细滚动条）、仅星标、标签 chip、BibTeX、导入、Zotero。
 - 批量整理：每行左侧勾选框；顶部「全选本页」只选当前页，「全部 N 篇」按当前筛选全选（跨页），
   选中后出现「已选 N 篇 / 删除所选 / 取消」，删除前有确认框，删完自动刷新星图与列表。
 - 顶部右侧：主题（跟随系统/深/浅）、字号（Aa 14/15/16）。
@@ -147,7 +149,8 @@ npm run install:desktop
 
 ## 数据与隐私
 
-- 所有数据只存本机：`%USERPROFILE%\.dsh\litgraph`（`papers/` 索引、`sources/` 原件、`tmp/`、`settings`）。
+- 所有数据只存本机：`%USERPROFILE%\.dsh\litgraph`（`papers/` 索引、`sources/` 原件、`notes-assets/` 笔记截图、
+  `tmp/`、`settings`）。备份时把 `notes-assets/` 和索引一起带走：笔记正文是纯 markdown，图片只存在这个目录。
 - 导入一篇 PDF 时，解析出的文本会发给当前配置的模型（默认 deepseek-flash）做元数据/摘要/分类抽取；
   模型不可用时导入失败并给出路由提示。不需要联网能力时可只用「仅导入记录」以外的本地流程不可行 —— 分类与摘要依赖模型。
 - 期刊指标只把期刊名发给 easyScholar。
@@ -215,13 +218,16 @@ node scripts/seed-scale.mjs --root <dataRoot> --count 1000 --clusters 12 --seed 
 
 - `GET /api/litgraph/status` —— 论文/聚类计数、数据根、`build`、`hostHash`
 - `GET /api/litgraph/graph` —— 节点/边/聚类
-- `GET /api/litgraph/papers?sort&order&page&pageSize&q&cluster&tag&starred&minRating`
-  （`sort` 支持 `rating`；`minRating` 1–5 过滤）
+- `GET /api/litgraph/papers?sort&order&page&pageSize&q&cluster&tag&starred&minRating`（`sort` 支持
+  `updatedAt`、`lastOpenedAt`、`rating`；`minRating` 1–5 过滤）
 - `GET|PATCH|DELETE /api/litgraph/paper?id=` —— 详情；PATCH 改 `notes/tags/starred/rating(0–5)`
 - `GET|PUT /api/litgraph/settings` —— `taxonomyMode: 'free' | 'fixed'`、`clusterLevel: 1 | 2 | 3`、
   `ocrEngine: 'auto' | 'windows' | 'model'`、`metricsSecretKey`、`metricsEnabled`，以及洞察默认值
   `insightScope` / `insightRecentYears` / `insightSaveNotes` / `insightPrecompute`
-- `POST /api/litgraph/open` —— `{id}` → 用 Zotero 阅读器或系统默认程序打开原件（无文件返回 404 `no file`）
+- `POST /api/litgraph/open` —— `{id}` → 用 Zotero 阅读器或系统默认程序打开原件，并记录 `lastOpenedAt`
+  （无文件返回 404 `no file`）
+- `POST /api/litgraph/notes-asset?paperId=` —— 原始图片 body（png/jpeg/webp/gif，≤10 MB）→ `{ok, url, markdown}`；
+  `GET|HEAD /api/litgraph/notes-asset?paperId=&f=` 供笔记预览取图
 - `POST /api/litgraph/metrics/refresh` —— `{ids?}` 排队抓期刊指标（省略 ids 则全部）
 - `GET /api/litgraph/metrics/probe?venue=` —— 直接查一个期刊/会议名，便于排查
 - `GET /api/litgraph/insight?scope&cluster&recentYears&refresh` —— 单个作用域的统计 + 一次模型调用

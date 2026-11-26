@@ -113,6 +113,8 @@ export interface Paper {
   starred?: boolean
   /** Star rating 0..5; 0 / undefined = not rated. */
   rating?: number
+  /** ISO time the original PDF was last opened from the detail panel. */
+  lastOpenedAt?: string
   /** Cached journal metrics; null / undefined = never queried. */
   metrics?: JournalMetrics | null
   /** Zotero identity, when the paper was imported from a Zotero library. */
@@ -182,6 +184,8 @@ export interface PaperListItem {
   metrics?: Partial<JournalMetrics> | null
   /** Unix seconds of the last Zotero read (null/absent = never read). */
   lastRead?: number | null
+  /** ISO time the PDF was last opened from the detail panel (null = never). */
+  lastOpenedAt?: string | null
 }
 
 export interface PapersPage {
@@ -193,7 +197,7 @@ export interface PapersPage {
   order: SortOrder
 }
 
-export type SortKey = 'updatedAt' | 'title' | 'year' | 'addedAt' | 'rating'
+export type SortKey = 'updatedAt' | 'lastOpenedAt' | 'title' | 'year' | 'addedAt' | 'rating'
 export type SortOrder = 'asc' | 'desc'
 
 export interface PapersQuery {
@@ -363,7 +367,8 @@ export interface StatusPayload {
 }
 
 export const SORT_OPTIONS: Array<{ value: SortKey; label: string }> = [
-  { value: 'updatedAt', label: '修改时间' },
+  { value: 'updatedAt', label: '最后修改' },
+  { value: 'lastOpenedAt', label: '最近打开' },
   { value: 'title', label: '标题' },
   { value: 'year', label: '年份' },
   { value: 'addedAt', label: '加入时间' },

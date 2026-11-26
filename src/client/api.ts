@@ -94,6 +94,19 @@ export function fetchPapers(query: PapersQuery, signal?: AbortSignal): Promise<P
   return requestJSON<PapersPage>('/papers?' + params.toString(), { signal })
 }
 
+/**
+ * Store one screenshot pasted into a paper's notes. The bytes go to
+ * <data root>/notes-assets/<paperId>/, the markdown line holds only the URL.
+ */
+export function uploadNotesAsset(paperId: string, blob: Blob): Promise<NotesAssetResult> {
+  const type = blob.type === '' ? 'image/png' : blob.type
+  return requestJSON<NotesAssetResult>('/notes-asset?paperId=' + encodeURIComponent(paperId), {
+    method: 'POST',
+    headers: { 'content-type': type },
+    body: blob,
+  })
+}
+
 export function fetchPaper(id: string, signal?: AbortSignal): Promise<PaperDetail> {
   return requestJSON<PaperDetail>('/paper?id=' + encodeURIComponent(id), { signal })
 }
@@ -139,6 +152,14 @@ export function refreshMetrics(
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body),
   })
+}
+
+/** POST /api/litgraph/notes-asset — a stored crop plus the markdown line to insert. */
+export interface NotesAssetResult {
+  ok: boolean
+  url: string
+  markdown: string
+  size: number
 }
 
 export interface InsightQuery {

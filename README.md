@@ -144,12 +144,14 @@ The `react` runtime is provided by the host.
 - Wheel to zoom, drag to pan, "Re-layout"; top search makes hit nodes glow and shows N/M hits in the corner; Enter opens
   the first hit.
 - Click a node: details on the left; notes/tags and star rating are saved automatically and update the library and
-  filters immediately.
+  filters immediately. Notes accept pasted (Ctrl+V) or dropped screenshots — they are stored on disk and rendered by the
+  notes **Edit / Preview** switch.
 - "Open PDF" in details: Zotero-imported papers go through `zotero://open-pdf` (Zotero's built-in reader, allows
   annotations); PDFs you dropped in yourself open in the system default reader.
 - "Journal metrics" in details: shows IF / JCR / CAS partition when available; otherwise click "Query metrics" to look
   the venue up on easyScholar.
-- Right column: sorting, paging, cluster chips (scroll horizontally when they don't fit; thin scrollbar too),
+- Right column: sorting (**last modified / recently opened / title / year / added / rating**; "recently opened" counts
+  only "Open PDF", not row clicks), paging, cluster chips (scroll horizontally when they don't fit; thin scrollbar too),
   starred-only, tag chips, BibTeX, import, Zotero.
 - Batch organizing: checkboxes on each row; "Select page" selects the current page only, "All N" selects everything
   under the current filter (across pages); once selected, "N selected / Delete selected / Clear" appears, deletion asks
@@ -175,7 +177,8 @@ Settings (`GET|PUT /api/litgraph/settings`, UI in the right-column settings dial
 ## Data and privacy
 
 - All data stays on this machine: `%USERPROFILE%\.dsh\litgraph` (`papers/` index, `sources/` originals,
-  `tmp/`, `settings`).
+  `notes-assets/` note screenshots, `tmp/`, `settings`). Back up `notes-assets/` together with the index — notes are
+  plain markdown, the images live only there.
 - When importing a PDF, the extracted text is sent to the currently configured model (deepseek-flash by default) for
   metadata/abstract/taxonomy extraction; if the model is unavailable the import fails with a routing hint. There is no
   fully local flow except "Import records only" — categories and abstracts need the model.
@@ -259,12 +262,14 @@ route reports a "route unavailable" error such as `MISSING_CREDENTIAL` / `ACCOUN
 - `GET /api/litgraph/status` — paper/cluster counts, data root, `build`, `hostHash`
 - `GET /api/litgraph/graph` — nodes/edges/clusters
 - `GET /api/litgraph/papers?sort&order&page&pageSize&q&cluster&tag&starred&minRating`
-  (`sort` supports `rating`; `minRating` filters 1–5)
+  (`sort` supports `updatedAt`, `lastOpenedAt`, `rating`; `minRating` filters 1–5)
 - `GET|PATCH|DELETE /api/litgraph/paper?id=` — details; PATCH updates `notes/tags/starred/rating(0–5)`
 - `GET|PUT /api/litgraph/settings` — `taxonomyMode: 'free' | 'fixed'`, `clusterLevel: 1 | 2 | 3`,
   `ocrEngine: 'auto' | 'windows' | 'model'`, `metricsSecretKey`, `metricsEnabled`
-- `POST /api/litgraph/open` — `{id}` → open the original with the Zotero reader or the system default program
-  (404 `no file` when there is no file)
+- `POST /api/litgraph/open` — `{id}` → open the original with the Zotero reader or the system default program,
+  and record `lastOpenedAt` (404 `no file` when there is no file)
+- `POST /api/litgraph/notes-asset?paperId=` — raw image body (png/jpeg/webp/gif, ≤10 MB) → `{ok, url, markdown}`;
+  `GET|HEAD /api/litgraph/notes-asset?paperId=&f=` serves it back for the notes preview
 - `POST /api/litgraph/metrics/refresh` — `{ids?}` queue journal-metric fetches (omit ids for all)
 - `GET /api/litgraph/metrics/probe?venue=` — query a single journal/conference name, for troubleshooting
 - `GET /api/litgraph/insight?scope&cluster&recentYears&refresh` — statistics + one model call for one scope

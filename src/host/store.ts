@@ -101,6 +101,8 @@ export class LibraryStore {
   readonly papersDir: string
   readonly sourcesDir: string
   readonly tmpDir: string
+  /** Cropped screenshots pasted into paper notes (one directory per paper). */
+  readonly notesAssetsDir: string
   readonly libraryPath: string
   private papers = new Map<string, StoredPaper>()
   private jobs = new Map<string, ImportJob>()
@@ -115,6 +117,7 @@ export class LibraryStore {
     this.papersDir = join(this.root, 'papers')
     this.sourcesDir = join(this.root, 'sources')
     this.tmpDir = join(this.root, 'tmp')
+    this.notesAssetsDir = join(this.root, 'notes-assets')
     this.libraryPath = join(this.root, 'library.json')
   }
 
@@ -127,6 +130,7 @@ export class LibraryStore {
     await mkdir(this.papersDir, { recursive: true })
     await mkdir(this.sourcesDir, { recursive: true })
     await mkdir(this.tmpDir, { recursive: true })
+    await mkdir(this.notesAssetsDir, { recursive: true })
     await this.reloadLibrary()
   }
 
@@ -286,13 +290,41 @@ export class LibraryStore {
     })
   }
 
-  async updatePaper(id: string, patch: Partial<StoredPaper>): Promise<StoredPaper | null> {
+  async updatePaper(
+    id: string,
+    patch: Partial<StoredPaper>,
+    options?: { touch?: boolean },
+  ): Promise<StoredPaper | null> {
     return this.mutate(async () => {
       const current = this.papers.get(id)
       if (current === undefined) return null
-      const next: StoredPaper = { ...current, ...patch, id, updatedAt: nowIso() }
+      const next: StoredPaper = {
+        ...current,
+        ...patch,
+        id,
+        updatedAt: options?.touch === false ? current.updatedAt : nowIso(),
+      }
       this.papers.set(id, next)
       await this.writePaperMeta(next)
+      return next
+    })
+  }
+
+  /** Directory holding the screenshots pasted into one paper's notes. */
+  notesAssetDir(id: string): string {
+    return join(this.notesAssetsDir, id)
+  }
+
+  /**
+   * Records a read. Only `lastOpenedAt` moves: bumping `updatedAt` here would
+   * make "last modified" sort jump every time a PDF is opened.
+   */
+  async touchOpened(id: string): Promise<StoredPaper | null> {
+    return this.mutate(() => {
+      const current = this.papers.get(id)
+      if (current === undefined) return null
+      const next: StoredPaper = { ...current, lastOpenedAt: nowIso() }
+      this.papers.set(id, next)
       return next
     })
   }
@@ -306,6 +338,7 @@ export class LibraryStore {
     if (removed === null) return null
     try {
       await rm(join(this.papersDir, id), { recursive: true, force: true })
+      await rm(join(this.notesAssetsDir, id), { recursive: true, force: true })
     } catch (error) {
       console.warn('[litgraph] failed to remove paper dir for', id, error)
     }

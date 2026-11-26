@@ -491,6 +491,28 @@ span.lgf-tag-label { cursor: default; }
 .lgf-collapse-body { display: block; }
 .lgf-collapsible.is-collapsed { gap: 0; }
 
+/* ================= detail panel: notes screenshots ================= */
+.lgf-notes-bar { display: flex; align-items: center; gap: 6px; margin-bottom: 6px; flex-wrap: wrap; }
+.lgf-notes-mode {
+  padding: 2px 10px; border-radius: 999px; cursor: pointer;
+  border: 1px solid var(--lg-border); background: transparent;
+  color: var(--lg-muted); font-size: calc(12px * var(--lg-fs-scale)); line-height: 1.6;
+}
+.lgf-notes-mode:hover { color: var(--lg-text); border-color: var(--lg-border-strong); }
+.lgf-notes-mode.is-active { color: var(--lg-accent-text); border-color: var(--lg-accent-border); background: var(--lg-accent-soft); }
+.lgf-notes-mode:focus-visible { outline: 2px solid var(--lg-ring); outline-offset: 1px; }
+.lgf-notes-preview {
+  display: flex; flex-direction: column; gap: 2px; max-height: 520px; overflow: auto;
+  font-size: calc(13px * var(--lg-fs-scale)); line-height: 1.66; color: var(--lg-text);
+}
+.lgf-notes-preview.is-empty { color: var(--lg-dim); font-size: calc(12px * var(--lg-fs-scale)); }
+.lgf-notes-line { margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+.lgf-notes-gap { height: 8px; flex: 0 0 auto; }
+.lgf-notes-image {
+  display: block; max-width: 100%; height: auto; margin: 6px 0;
+  border: 1px solid var(--lg-border); border-radius: 8px; background: var(--lg-panel-raised);
+}
+
 `
 
 let featureStyleElement: HTMLStyleElement | null = null
