@@ -1,0 +1,5 @@
+# Bundle patch: applied by the host when a profile lists this package in
+# package.json's dsh.profile.bundles (mirrors dshmarket / the maid skin).
+- insert:
+    - id: litgraph
+      name: 'dsh-litgraph'
