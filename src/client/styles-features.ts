@@ -477,6 +477,20 @@ span.lgf-tag-label { cursor: default; }
   background: var(--lg-accent-soft);
 }
 
+/* ================= detail panel: collapsible sections ================= */
+.lgf-section-title { flex: 1 1 auto; min-width: 0; }
+.lgf-collapse-toggle {
+  display: inline-flex; align-items: center; gap: 6px; margin: 0; padding: 0;
+  border: 0; background: transparent; font: inherit; color: inherit;
+  letter-spacing: inherit; text-transform: inherit; text-align: left; cursor: pointer;
+}
+.lgf-collapse-toggle:hover { color: var(--lg-cyan); }
+.lgf-collapse-toggle:focus-visible { outline: 2px solid var(--lg-ring); outline-offset: 2px; border-radius: 3px; }
+.lgf-collapse-caret { width: 10px; font-size: 10px; line-height: 1; color: var(--lg-dim); }
+.lgf-collapse-toggle:hover .lgf-collapse-caret { color: var(--lg-cyan); }
+.lgf-collapse-body { display: block; }
+.lgf-collapsible.is-collapsed { gap: 0; }
+
 `
 
 let featureStyleElement: HTMLStyleElement | null = null

@@ -549,11 +549,7 @@ export function DetailPanel(props: DetailPanelProps) {
         </button>
       </div>
 
-      <section className="lg-detail-section">
-        <div className="lgf-section-head">
-          <h3>笔记</h3>
-          <SaveIndicator state={saveState} error={saveError} onRetry={() => void saveNotes(detail.id, notesDraft)} />
-        </div>
+      <Collapsible title="笔记" meta={<SaveIndicator state={saveState} error={saveError} onRetry={() => void saveNotes(detail.id, notesDraft)} />}>
         <textarea
           className="lgf-textarea"
           value={notesDraft}
@@ -569,17 +565,12 @@ export function DetailPanel(props: DetailPanelProps) {
         ) : (
           <div className="lgf-hint">{notesDraft.length > 0 ? notesDraft.length + ' / ' + NOTES_MAX + ' 字' : '输入后 0.8 秒自动保存'}</div>
         )}
-      </section>
+      </Collapsible>
 
-      <section className="lg-detail-section">
-        <div className="lgf-section-head">
-          <h3>标签</h3>
-          {tags.length > 0 ? (
-            <span className="lgf-save-state">
-              {tags.length} / {TAGS_MAX}
-            </span>
-          ) : null}
-        </div>
+      <Collapsible
+        title="标签"
+        meta={tags.length > 0 ? <span className="lgf-save-state">{tags.length} / {TAGS_MAX}</span> : null}
+      >
         <div className="lgf-tag-editor">
           {tags.map((tag) => (
             <span className="lgf-tag" key={tag}>
@@ -638,11 +629,100 @@ export function DetailPanel(props: DetailPanelProps) {
           />
         </div>
         {tagHint ? <div className="lgf-hint is-error">{tagHint}</div> : <div className="lgf-hint">回车添加、点 × 删除；点击标签可按它筛选论文库</div>}
-      </section>
+      </Collapsible>
 
-      <section className="lg-detail-section lgf-zotero">
-        <div className="lgf-section-head">
-          <h3>Zotero</h3>
+      {detail.summary ? (
+        <Collapsible title="AI 总结">
+          <p className="lg-detail-prose">{detail.summary}</p>
+        </Collapsible>
+      ) : null}
+
+      {detail.contributions.length > 0 ? (
+        <Collapsible title="主要贡献">
+          <ul className="lg-detail-bullets">
+            {detail.contributions.map((item, index) => (
+              <li key={index}>{item}</li>
+            ))}
+          </ul>
+        </Collapsible>
+      ) : null}
+
+      {detail.method ? (
+        <Collapsible title="方法">
+          <p className="lg-detail-prose">{detail.method}</p>
+        </Collapsible>
+      ) : null}
+
+      {detail.abstract ? (
+        <Collapsible title="摘要">
+          <p className="lg-detail-prose">{detail.abstract}</p>
+        </Collapsible>
+      ) : null}
+
+      {detail.keywords.length > 0 ? (
+        <Collapsible title="关键词">
+          <div className="lg-detail-chips">
+            {detail.keywords.map((keyword) => (
+              <span key={keyword} className="lg-chip">
+                {keyword}
+              </span>
+            ))}
+          </div>
+        </Collapsible>
+      ) : null}
+
+      <Collapsible
+        title="期刊指标"
+        meta={metrics ? <span className="lgf-metrics-source">EasyScholar</span> : null}
+        className="lgf-metrics"
+      >
+        {metrics ? (
+          <>
+            <dl className="lgf-metrics-grid">
+              <div className="lgf-metric">
+                <dt>影响因子</dt>
+                <dd className="lgf-metric-value">{formatMetric(metrics.impactFactor)}</dd>
+              </div>
+              <div className="lgf-metric">
+                <dt>5 年 IF</dt>
+                <dd className="lgf-metric-value">{formatMetric(metrics.impactFactor5)}</dd>
+              </div>
+              <div className="lgf-metric">
+                <dt>JCR 分区</dt>
+                <dd>{metrics.jcrQuartile || '—'}</dd>
+              </div>
+              <div className="lgf-metric">
+                <dt>中科院分区</dt>
+                <dd>
+                  {metrics.casPartition || '—'}
+                  {metrics.casTop ? <span className="lgf-metrics-top">TOP</span> : null}
+                  {metrics.casSmall ? <span className="lgf-metric-sub">小类 {metrics.casSmall}</span> : null}
+                </dd>
+              </div>
+              <div className="lgf-metric">
+                <dt>ESI</dt>
+                <dd>{metrics.esi || '—'}</dd>
+              </div>
+            </dl>
+            <div className="lgf-hint">数据来自 EasyScholar · 查询于 {formatTime(metrics.fetchedAt)}</div>
+            <button type="button" className="lgf-metrics-query" disabled={metricsBusy} onClick={() => void queryMetrics()}>
+              {metricsBusy ? '查询中…' : '重新查询指标'}
+            </button>
+          </>
+        ) : (
+          <>
+            <div className="lgf-hint">{metricsHint ?? '还没有查询这篇文献的期刊指标（影响因子、JCR / 中科院分区、ESI）。'}</div>
+            <button type="button" className="lgf-metrics-query" disabled={metricsBusy} onClick={() => void queryMetrics()}>
+              {metricsBusy ? '查询中…' : '查询指标'}
+            </button>
+          </>
+        )}
+      </Collapsible>
+
+      <Collapsible
+        title="Zotero"
+        className="lgf-zotero"
+        meta={
           <span className="lgf-zotero-status">
             {zoteroState === null
               ? '检测中…'
@@ -650,7 +730,8 @@ export function DetailPanel(props: DetailPanelProps) {
                 ? '已连接 ' + zoteroState.version
                 : '未连接'}
           </span>
-        </div>
+        }
+      >
         {zoteroRef === undefined ? (
           <>
             <div className="lgf-hint">这篇还没有匹配到 Zotero 条目。匹配后可以在这里直接改 Zotero 分类，打开原文也会经 Zotero 记录最后阅读时间。</div>
@@ -737,54 +818,7 @@ export function DetailPanel(props: DetailPanelProps) {
             )}
           </>
         )}
-      </section>
-      <section className="lg-detail-section lgf-metrics">
-        <div className="lgf-section-head">
-          <h3>期刊指标</h3>
-          {metrics ? <span className="lgf-metrics-source">EasyScholar</span> : null}
-        </div>
-        {metrics ? (
-          <>
-            <dl className="lgf-metrics-grid">
-              <div className="lgf-metric">
-                <dt>影响因子</dt>
-                <dd className="lgf-metric-value">{formatMetric(metrics.impactFactor)}</dd>
-              </div>
-              <div className="lgf-metric">
-                <dt>5 年 IF</dt>
-                <dd className="lgf-metric-value">{formatMetric(metrics.impactFactor5)}</dd>
-              </div>
-              <div className="lgf-metric">
-                <dt>JCR 分区</dt>
-                <dd>{metrics.jcrQuartile || '—'}</dd>
-              </div>
-              <div className="lgf-metric">
-                <dt>中科院分区</dt>
-                <dd>
-                  {metrics.casPartition || '—'}
-                  {metrics.casTop ? <span className="lgf-metrics-top">TOP</span> : null}
-                  {metrics.casSmall ? <span className="lgf-metric-sub">小类 {metrics.casSmall}</span> : null}
-                </dd>
-              </div>
-              <div className="lgf-metric">
-                <dt>ESI</dt>
-                <dd>{metrics.esi || '—'}</dd>
-              </div>
-            </dl>
-            <div className="lgf-hint">数据来自 EasyScholar · 查询于 {formatTime(metrics.fetchedAt)}</div>
-            <button type="button" className="lgf-metrics-query" disabled={metricsBusy} onClick={() => void queryMetrics()}>
-              {metricsBusy ? '查询中…' : '重新查询指标'}
-            </button>
-          </>
-        ) : (
-          <>
-            <div className="lgf-hint">{metricsHint ?? '还没有查询这篇文献的期刊指标（影响因子、JCR / 中科院分区、ESI）。'}</div>
-            <button type="button" className="lgf-metrics-query" disabled={metricsBusy} onClick={() => void queryMetrics()}>
-              {metricsBusy ? '查询中…' : '查询指标'}
-            </button>
-          </>
-        )}
-      </section>
+      </Collapsible>
 
       {detail.parseNote ? (
         <div className="lg-detail-note">
@@ -792,53 +826,7 @@ export function DetailPanel(props: DetailPanelProps) {
         </div>
       ) : null}
 
-      {detail.abstract ? (
-        <section className="lg-detail-section">
-          <h3>摘要</h3>
-          <p className="lg-detail-prose">{detail.abstract}</p>
-        </section>
-      ) : null}
-
-      {detail.summary ? (
-        <section className="lg-detail-section">
-          <h3>AI 总结</h3>
-          <p className="lg-detail-prose">{detail.summary}</p>
-        </section>
-      ) : null}
-
-      {detail.contributions.length > 0 ? (
-        <section className="lg-detail-section">
-          <h3>主要贡献</h3>
-          <ul className="lg-detail-bullets">
-            {detail.contributions.map((item, index) => (
-              <li key={index}>{item}</li>
-            ))}
-          </ul>
-        </section>
-      ) : null}
-
-      {detail.method ? (
-        <section className="lg-detail-section">
-          <h3>方法</h3>
-          <p className="lg-detail-prose">{detail.method}</p>
-        </section>
-      ) : null}
-
-      {detail.keywords.length > 0 ? (
-        <section className="lg-detail-section">
-          <h3>关键词</h3>
-          <div className="lg-detail-chips">
-            {detail.keywords.map((keyword) => (
-              <span key={keyword} className="lg-chip">
-                {keyword}
-              </span>
-            ))}
-          </div>
-        </section>
-      ) : null}
-
-      <section className="lg-detail-section">
-        <h3>来源</h3>
+      <Collapsible title="来源">
         <dl className="lg-meta-grid">
           <dt>文件名</dt>
           <dd title={detail.fileName}>{detail.fileName || '—'}</dd>
@@ -849,11 +837,45 @@ export function DetailPanel(props: DetailPanelProps) {
           <dt>最近更新</dt>
           <dd>{formatTime(detail.updatedAt)}</dd>
         </dl>
-      </section>
+      </Collapsible>
+
     </div>
   )
 }
 
+function Collapsible(props: {
+  title: string
+  meta?: React.ReactNode
+  className?: string
+  children: React.ReactNode
+}) {
+  const [open, setOpen] = React.useState(true)
+  const classes = ['lg-detail-section', 'lgf-collapsible', props.className ?? '', open ? 'is-open' : 'is-collapsed']
+    .filter(Boolean)
+    .join(' ')
+  return (
+    <section className={classes}>
+      <div className="lgf-section-head">
+        <h3 className="lgf-section-title">
+          <button
+            type="button"
+            className="lgf-collapse-toggle"
+            aria-expanded={open}
+            title={open ? '收起' : '展开'}
+            onClick={() => setOpen((value) => !value)}
+          >
+            <span className="lgf-collapse-caret" aria-hidden="true">
+              {open ? '▾' : '▸'}
+            </span>
+            {props.title}
+          </button>
+        </h3>
+        {props.meta ?? null}
+      </div>
+      {open ? <div className="lgf-collapse-body">{props.children}</div> : null}
+    </section>
+  )
+}
 function SaveIndicator(props: { state: SaveState; error: string | null; onRetry: () => void }) {
   const { state, error, onRetry } = props
   if (state === 'idle') return null
