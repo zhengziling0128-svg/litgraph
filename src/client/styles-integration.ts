@@ -3,12 +3,12 @@
  *
  * Not part of styles.ts (theme tokens/layout) nor styles-features.ts (feature
  * panels): this file only styles the workbench-level controls that switch
- * between features — the graph/insight tabs and the Zotero entry button.
+ * between features — the graph/timeline tabs and the Zotero entry button.
  */
 export const INTEGRATION_STYLE_ID = 'dsh-litgraph-integration-styles'
 
 export const INTEGRATION_CSS = `
-/* ================= view switch (graph / insight) ================= */
+/* ================= view switch (graph / timeline) ================= */
 .lg-view-toggle {
   position: absolute; top: 12px; left: 12px; z-index: 6;
   display: flex; align-items: center; gap: 2px; padding: 3px;
@@ -39,6 +39,9 @@ export const INTEGRATION_CSS = `
   color: var(--lg-accent-text); font-size: 10px; font-weight: 800; line-height: 1;
 }
 .lg-zotero-text { font-size: calc(12px * var(--lg-fs-scale)); font-weight: 560; }
+
+/* timeline replaces the graph, so it has to own the center column height */
+.lg-col-center > .lgf-timeline { flex: 1 1 auto; min-height: 0; }
 
 @media (max-width: 900px) {
   .lg-zotero-text { display: none; }

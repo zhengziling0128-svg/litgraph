@@ -5,17 +5,13 @@ All notable changes to LitGraph. Version numbers follow [semantic versioning](ht
 
 ## 0.3.0 — 2026-11-26
 
-### Changed
+### Changed (docs/showcase only — no behaviour change)
 
-- The center view switch is now **star map / insight**. The insight view is the AI-centred second view, so it
-  takes the slot the year timeline used to occupy; the chart itself is unchanged (same scopes, windows and
-  cache).
-- README screenshots and the feature list now show the insight view instead of the timeline.
-
-### Removed
-
-- Timeline view (`components/TimelineView.tsx`, `timeline.ts`, its CSS). Papers are still ordered and filtered
-  by year through the library sort and the insight window; only the lane chart is gone.
+- README showcase: the screenshot table now features the **insight view** ("research trends inside this
+  library") in the slot the timeline chart used to occupy. The insight view is the AI-centred one, so it
+  represents the plugin better than a year axis.
+- The app is unchanged: the centre view switch remains **star map / timeline / insight**, and the timeline
+  view is still documented in the feature list.
 
 ## 0.2.0 — 2026-11-26
 
