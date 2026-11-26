@@ -56,5 +56,13 @@
     "pdf",
     "ocr"
   ],
-  "author": "LitGraph contributors"
+  "author": "LitGraph contributors",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/zhengziling0128-svg/litgraph.git"
+  },
+  "homepage": "https://github.com/zhengziling0128-svg/litgraph#readme",
+  "bugs": {
+    "url": "https://github.com/zhengziling0128-svg/litgraph/issues"
+  }
 }
