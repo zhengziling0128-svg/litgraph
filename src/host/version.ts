@@ -16,8 +16,12 @@ import { readFile } from 'node:fs/promises'
 import { fileURLToPath } from 'node:url'
 
 declare const __LITGRAPH_BUILD__: string | undefined
+declare const __LITGRAPH_VERSION__: string | undefined
 
 export const PLUGIN_BUILD = typeof __LITGRAPH_BUILD__ === 'string' ? __LITGRAPH_BUILD__ : 'dev'
+
+/** package.json version baked in at build time (see CHANGELOG.md for what changed). */
+export const PLUGIN_VERSION = typeof __LITGRAPH_VERSION__ === 'string' ? __LITGRAPH_VERSION__ : 'dev'
 
 let hostHashPromise: Promise<string> | null = null
 

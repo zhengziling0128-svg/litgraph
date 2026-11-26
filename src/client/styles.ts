@@ -529,6 +529,11 @@ export const CSS = String.raw`
   font-size: calc(11.5px * var(--lg-fs-scale)); color: var(--lg-dim);
   background: var(--lg-panel);
 }
+.lg-footer-meta { display: inline-flex; align-items: center; gap: 10px; }
+.lg-footer-version {
+  padding: 0 5px; border: 1px solid var(--lg-border); border-radius: 4px;
+  font-variant-numeric: tabular-nums; letter-spacing: 0.3px;
+}
 
 /* ---------- jobs + toasts ---------- */
 .lg-toast-stack { position: absolute; z-index: 50; right: 16px; bottom: 46px; display: flex; flex-direction: column; gap: 8px; width: min(380px, calc(100% - 32px)); pointer-events: none; }

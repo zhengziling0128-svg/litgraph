@@ -23,6 +23,7 @@ import {
   uploadPaper,
 } from './api'
 import { computeLayout, makeStars } from './layout/force'
+import { PLUGIN_VERSION } from './version'
 import type { GraphPayload, ImportJob, PaperDetail, SortKey, SortOrder, StatusPayload } from './types'
 import { PAGE_SIZE } from './types'
 import { ensureStyles } from './styles'
@@ -820,7 +821,12 @@ export function Workbench() {
 
       <div className="lg-footer-hint">
         <span>拖入 PDF 或点击「导入」 · 滚轮缩放 · 拖拽平移 · 点击节点查看详情</span>
-        {graph ? <span>{graph.edges.length} 条关联</span> : null}
+        <span className="lg-footer-meta">
+          {graph ? <span>{graph.edges.length} 条关联</span> : null}
+          <span className="lg-footer-version" title="LitGraph 版本；更新说明见 CHANGELOG.md">
+            v{PLUGIN_VERSION}
+          </span>
+        </span>
       </div>
     </div>
   )

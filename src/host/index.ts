@@ -21,7 +21,7 @@ import { LitgraphPipeline, PipelineError } from './pipeline.js'
 import { LibraryStore, type LibrarySettings } from './store.js'
 import type { LitgraphConfig, LlmService, StoredPaper } from './types.js'
 import { clampInt, errorMessage } from './util.js'
-import { PLUGIN_BUILD, hostBundleHash } from './version.js'
+import { PLUGIN_BUILD, PLUGIN_VERSION, hostBundleHash } from './version.js'
 import type { VisionAttachments } from './vision-ocr.js'
 import { ZoteroScanError, importZoteroSelection, scanZoteroLibrary } from './zotero.js'
 import {
@@ -282,6 +282,7 @@ route('/api/litgraph/status', ['GET', 'HEAD'], async (req, res, { pipeline, conf
   const payload = await pipeline.status()
   respondJson(res, 200, {
     ...payload,
+    version: PLUGIN_VERSION,
     build: PLUGIN_BUILD,
     hostHash: await hostBundleHash(),
     ocrEngine: config.ocrEngine,

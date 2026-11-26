@@ -34,7 +34,7 @@ DeepSeek Harness 插件：文献知识图谱工作台。中间星空知识图谱
   空白方法×问题组合、值得尝试的研究问题。内容全部由本库论文统计 + 一次模型调用得出，结果缓存在
   `<数据根>/insights/`；每条结论都带证据论文 chips，点击可跳回星图；卡片可存进论文笔记或导出 Markdown。
   页面顶部明写「基于本库 N 篇的统计与推测，不是学界研究前沿」。
-- **详情栏**：标题/作者/年份/会议/分类/图中关联数/页面统计/摘要/AI 总结；可编辑笔记、标签；
+- **详情栏**（每块都能折叠，默认展开；AI 总结、主要贡献、方法这些分析块排在摘要之前）：标题/作者/年份/会议/分类/图中关联数/页面统计/摘要/AI 总结；可编辑笔记、标签；
   1–5 星评分（评分 ≥1 自动算星标，再点同一颗星清零）；期刊指标卡（影响因子 / 5 年 IF / JCR 分区 /
   中科院分区 + TOP 徽标 / 小类 / ESI，来自 easyScholar，可点「重新查询指标」）；
   「打开原文」按 Zotero 附件 key 调 `zotero://open-pdf/library/items/<key>`，把 PDF 交回 Zotero，
@@ -73,6 +73,17 @@ DeepSeek Harness 插件：文献知识图谱工作台。中间星空知识图谱
 - DeepSeek Harness（桌面端或 `dsh web`），插件挂在某个 profile 上
 - Windows 可选能力：本地 OCR（`Windows.Media.Ocr`，只带 `zh-Hans-CN` 识别器时英文也能读但 o/0、l/I 易混）
 - 可选：Zotero 7（导入题录/PDF、写回分类、打开原文）、RetainPDF（PDF 阅读器）
+
+## 版本
+
+当前版本：**0.2.0** — 变更见 [CHANGELOG.md](CHANGELOG.md)。
+
+版本号用语义化版本：`MAJOR` 表示数据或接口不兼容，`MINOR` 表示新增功能，`PATCH` 表示修复。
+运行中的版本显示在窗口底部提示条右侧（`v0.2.0`），`GET /api/litgraph/status` 也有 `version` 字段，
+因此能一眼看出界面和宿主进程各自是哪个构建；`npm run install:desktop` 会同时打印磁盘版本和运行版本。
+
+发版流程：改 `package.json` 里的 `version` → 在 `CHANGELOG.md` 加一节 → `npm run build` →
+`git tag v0.2.0 && git push --tags` → `gh release create v0.2.0 --notes-file <notes>`。
 
 ## 安装
 

@@ -73,6 +73,8 @@ const diskBuild = /PLUGIN_BUILD = "([^"]+)"/.exec(bundle.toString('utf8'))?.[1] 
 const diskHash = createHash('sha256').update(bundle).digest('hex').slice(0, 16)
 console.log('disk build:     ' + diskBuild)
 console.log('disk hash:      ' + diskHash)
+const diskVersion = JSON.parse(await readFile(join(root, 'package.json'), 'utf8')).version
+console.log('disk version:   ' + diskVersion)
 
 async function statusOf(port) {
   try {
@@ -152,18 +154,24 @@ if (explicitPort !== null) {
 
 if (live === null || live.status === null) {
   console.log('live host:      not reachable (desktop app closed?)')
-} else if (typeof live.status.hostHash === 'string' && live.status.hostHash !== '') {
-  if (live.status.hostHash === diskHash) {
-    console.log('live host:      port ' + live.port + ', ' + (live.status.build ?? 'unknown') + '  (host half up to date, hash ' + diskHash + ')')
+} else {
+  if (typeof live.status.version === 'string' && live.status.version !== '') {
+    const same = live.status.version === diskVersion
+    console.log('live version:   ' + live.status.version + (same ? '  (same as disk)' : '  (disk ' + diskVersion + ' - restart pending)'))
+  }
+  if (typeof live.status.hostHash === 'string' && live.status.hostHash !== '') {
+    if (live.status.hostHash === diskHash) {
+      console.log('live host:      port ' + live.port + ', ' + (live.status.build ?? 'unknown') + '  (host half up to date, hash ' + diskHash + ')')
+    } else {
+      console.log('live host:      port ' + live.port + ', ' + (live.status.build ?? 'unknown') + '  (hash ' + live.status.hostHash + ' != disk ' + diskHash + ')')
+      console.log('ACTION: quit & reopen DeepSeek Harness once to load the new host half;')
+      console.log('        client-only changes just need Ctrl+R in the LitGraph window.')
+    }
+  } else if (live.status.build === diskBuild) {
+    console.log('live host:      port ' + live.port + ', ' + diskBuild + '  (host half up to date; legacy host without hash)')
   } else {
-    console.log('live host:      port ' + live.port + ', ' + (live.status.build ?? 'unknown') + '  (hash ' + live.status.hostHash + ' != disk ' + diskHash + ')')
+    console.log('live host:      port ' + live.port + ', ' + (live.status.build ?? 'pre-stamp build') + '  (legacy host without hash)')
     console.log('ACTION: quit & reopen DeepSeek Harness once to load the new host half;')
     console.log('        client-only changes just need Ctrl+R in the LitGraph window.')
   }
-} else if (live.status.build === diskBuild) {
-  console.log('live host:      port ' + live.port + ', ' + diskBuild + '  (host half up to date; legacy host without hash)')
-} else {
-  console.log('live host:      port ' + live.port + ', ' + (live.status.build ?? 'pre-stamp build') + '  (legacy host without hash)')
-  console.log('ACTION: quit & reopen DeepSeek Harness once to load the new host half;')
-  console.log('        client-only changes just need Ctrl+R in the LitGraph window.')
 }

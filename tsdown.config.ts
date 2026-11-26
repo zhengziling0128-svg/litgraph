@@ -1,4 +1,9 @@
+import { createRequire } from 'node:module'
 import { defineConfig } from 'tsdown'
+
+/** package version, baked into both halves so the UI can show what is running. */
+const require = createRequire(import.meta.url)
+const VERSION: string = require('./package.json').version
 
 /**
  * dsh-litgraph build (preset mirrored from the shell's own dsh-web-ui client preset,
@@ -45,7 +50,10 @@ export default defineConfig([
     external: ['@deepseek-ai/cordis', '@napi-rs/canvas', 'sql.js'],
     // Build stamp: surfaced via /api/litgraph/status so the running host can be
     // matched against the stamped file name in the profile patch.
-    define: { __LITGRAPH_BUILD__: JSON.stringify(new Date().toISOString()) },
+    define: {
+      __LITGRAPH_BUILD__: JSON.stringify(new Date().toISOString()),
+      __LITGRAPH_VERSION__: JSON.stringify(VERSION),
+    },
     // unpdf (pdf text extraction) is bundled into lib/index.js so the installed
     // plugin is self-contained and needs no runtime node_modules resolution.
     deps: { alwaysBundle: ['unpdf'] },
@@ -62,6 +70,7 @@ export default defineConfig([
     external: [...CLIENT_EXTERNALS],
     noExternal: (id: string) => (CLIENT_EXTERNALS.includes(id) ? undefined : true),
     define: {
+      __LITGRAPH_VERSION__: JSON.stringify(VERSION),
       'process.env.NODE_ENV': JSON.stringify(MODE),
       'import.meta.env.MODE': JSON.stringify(MODE),
       'import.meta.env': JSON.stringify({ MODE }),
