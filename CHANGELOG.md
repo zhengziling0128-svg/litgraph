@@ -3,6 +3,13 @@
 All notable changes to LitGraph. Version numbers follow [semantic versioning](https://semver.org/):
 `MAJOR` for breaking data/API changes, `MINOR` for new features, `PATCH` for fixes.
 
+## 0.4.1 — 2026-11-26
+
+### Changed
+
+- Notes with content now open in **Preview** instead of the editor, so text and pasted screenshots are visible
+  together right away. Empty notes still open the editor. "Edit" is one click away when you want the markdown.
+
 ## 0.4.0 — 2026-11-26
 
 ### Added

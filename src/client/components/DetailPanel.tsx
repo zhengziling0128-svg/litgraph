@@ -207,7 +207,9 @@ export function DetailPanel(props: DetailPanelProps) {
     setMetricsBusy(false)
     setMetricsHint(null)
     setMetricsOverride(null)
-    setNotesMode('edit')
+    // A note that already has content opens rendered: text and pasted screenshots
+    // are visible together instead of raw markdown. Empty notes still open the editor.
+    setNotesMode((detail?.notes ?? '').trim() === '' ? 'edit' : 'preview')
     setImageBusy(false)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [paperId])
